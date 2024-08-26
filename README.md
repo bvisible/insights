@@ -79,8 +79,9 @@ To setup the repository locally follow the steps mentioned below:
 1. Start the server by running `bench start`
 1. In a separate terminal window, create a new site by running `bench new-site insights.test`
 1. Map your site to localhost with the command `bench --site insights.test add-to-hosts`
-1. Get the Insights app. Run `bench get-app https://github.com/frappe/insights`
-1. Run `bench --site insights.test install-app insights`.
+1. Get the Insights app. Run `bench get-app https://github.com/bvisible/insights.git --resolve-deps
+bench --site prod.local install-app insights`
+1. Run `bench --site prod.local install-app insights`.
 1. Now open the URL `http://insights.test:8000/insights` in your browser, you should see the app running
 
 ---
