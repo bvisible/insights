@@ -1,14 +1,12 @@
 import frappe
 
-from insights.api.telemetry import track
-from insights.decorators import check_role
+from insights.decorators import insights_whitelist
 from insights.insights.doctype.insights_team.insights_team import (
     get_allowed_resources_for_user,
 )
 
 
-@frappe.whitelist()
-@check_role("Insights User")
+@insights_whitelist()
 def get_queries():
     allowed_queries = get_allowed_resources_for_user("Insights Query")
     if not allowed_queries:
@@ -53,10 +51,8 @@ def get_queries():
     ).run(as_dict=True)
 
 
-@frappe.whitelist()
-@check_role("Insights User")
+@insights_whitelist()
 def create_query(**query):
-    track("create_query")
     doc = frappe.new_doc("Insights Query")
     doc.title = query.get("title")
     doc.data_source = query.get("data_source")
@@ -78,15 +74,20 @@ def create_query(**query):
     return doc.as_dict()
 
 
-@frappe.whitelist()
+@insights_whitelist()
 def create_chart():
     chart = frappe.new_doc("Insights Chart")
     chart.save()
     return chart.name
 
 
-@frappe.whitelist()
-def pivot(data, indexes: list[str] = None, columns: list[str] = None, values: list[str] = None):
+@frappe.whitelist(allow_guest=True)
+def pivot(
+    data,
+    indexes: list[str] | None = None,
+    columns: list[str] | None = None,
+    values: list[str] | None = None,
+):
     indexes = indexes or []
     columns = columns or []
     values = values or []
@@ -105,7 +106,13 @@ def pivot(data, indexes: list[str] = None, columns: list[str] = None, values: li
             df[value_column] = df[value_column].apply(lambda x: 1)
 
     pivot = pd.pivot_table(
-        df, index=indexes, columns=columns, values=values, sort=False, fill_value=0, aggfunc="sum"
+        df,
+        index=indexes,
+        columns=columns,
+        values=values,
+        sort=False,
+        fill_value=0,
+        aggfunc="sum",
     )
     pivot = pivot.reset_index()
     pivot = pivot.to_dict("records")
