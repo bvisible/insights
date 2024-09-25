@@ -16,7 +16,7 @@ export default defineConfig({
 		outDir: `../insights/public/frontend`,
 		emptyOutDir: true,
 		target: 'es2015',
-		sourcemap: true,
+		sourcemap: false,
 		rollupOptions: {
 			input: {
 				main: path.resolve(__dirname, 'index.html'),
