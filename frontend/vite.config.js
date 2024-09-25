@@ -27,6 +27,7 @@ export default defineConfig({
 					'frappe-ui': ['frappe-ui'],
 				},
 			},
+			maxParallelFileOps: 2,
 		},
 	},
 	optimizeDeps: {
