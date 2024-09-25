@@ -33,10 +33,15 @@ class InsightsTeam(Document):
     def validate(self):
         if self.team_name == "Admin":
             if not self.team_members:
-                frappe.throw("Admin team must have at least one member")
+                admin_user = frappe.db.get_value("User", {"user_identity": "admin"}, "name")
+                if admin_user:
+                    self.append("team_members", {"user": admin_user})
+                    frappe.msgprint(f"Admin team was empty. User '{admin_user}' with user_identity 'admin' has been added as a member.")
+                else:
+                    frappe.throw("No user with user_identity 'admin' found. Please create an 'admin' user before proceeding.")
             if self.has_value_changed("team_name"):
                 frappe.throw("Admin team name cannot be changed")
-
+    
         for d in self.team_permissions:
             if d.resource_type not in [
                 "Insights Data Source v3",
