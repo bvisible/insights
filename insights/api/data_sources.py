@@ -4,6 +4,8 @@ from frappe.utils.caching import redis_cache, site_cache
 from insights import notify
 from insights.decorators import insights_whitelist, validate_type
 from insights.insights.doctype.insights_data_source_v3.ibis_utils import (
+    execute_ibis_query,
+    get_columns_from_schema,
     to_insights_type,
 )
 from insights.insights.doctype.insights_query.utils import infer_type_from_list
@@ -315,6 +317,7 @@ def get_data_source_tables(data_source=None, search_term=None, limit=100):
         ret.append(
             frappe._dict(
                 {
+                    "name": table.name,
                     "label": table.label,
                     "table_name": table.table,
                     "data_source": table.data_source,
@@ -323,6 +326,23 @@ def get_data_source_tables(data_source=None, search_term=None, limit=100):
             )
         )
     return ret
+
+
+@insights_whitelist()
+@validate_type
+def get_data_source_table(data_source: str, table_name: str):
+    check_table_permission(data_source, table_name)
+    ds = frappe.get_doc("Insights Data Source v3", data_source)
+    db = ds._get_ibis_backend()
+    q = db.table(table_name).head(100)
+    data = execute_ibis_query(q, cache=True, cache_expiry=24 * 60 * 60)
+
+    return {
+        "table_name": table_name,
+        "data_source": data_source,
+        "columns": get_columns_from_schema(q.schema()),
+        "rows": data.to_dict(orient="records"),
+    }
 
 
 @insights_whitelist()
@@ -386,3 +406,25 @@ def create_data_source(data_source):
     ds = make_data_source(data_source)
     ds.save()
     return ds.name
+
+
+@insights_whitelist()
+def get_data_sources_of_tables(table_names: list[str]):
+    if not table_names:
+        return {}
+    if not isinstance(table_names, list):
+        frappe.throw("Table names should be a list")
+    if not all(isinstance(table_name, str) for table_name in table_names):
+        frappe.throw("Table names should be a list of strings")
+
+    tables = frappe.get_list(
+        "Insights Table v3",
+        filters={"name": ["in", table_names]},
+        fields=["data_source", "name"],
+    )
+    data_sources = {}
+    for table in tables:
+        data_sources[table.data_source] = data_sources.get(table.data_source, [])
+        data_sources[table.data_source].append(table.name)
+
+    return data_sources

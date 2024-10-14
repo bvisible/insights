@@ -18,11 +18,11 @@ def fetch_query_results(operations, use_live_connection=True):
         return
 
     columns = get_columns_from_schema(ibis_query.schema())
-    results = execute_ibis_query(ibis_query)
+    results = execute_ibis_query(ibis_query, cache=True, cache_expiry=60 * 5)
     results = results.to_dict(orient="records")
 
     count_query = ibis_query.aggregate(count=_.count())
-    count_results = execute_ibis_query(count_query)
+    count_results = execute_ibis_query(count_query, cache=True, cache_expiry=60 * 5)
     total_count = count_results.values[0][0]
 
     return {
@@ -45,7 +45,7 @@ def download_query_results(operations, use_live_connection=True):
 
 @insights_whitelist()
 def get_distinct_column_values(
-    operations, column_name, search_term=None, use_live_connection=True
+    operations, column_name, search_term=None, use_live_connection=True, limit=20
 ):
     query = IbisQueryBuilder().build(operations, use_live_connection)
     values_query = (
@@ -56,7 +56,7 @@ def get_distinct_column_values(
             else getattr(_, column_name).ilike(f"%{search_term}%")
         )
         .distinct()
-        .head(20)
+        .head(limit)
     )
     result = execute_ibis_query(values_query, cache=True)
     return result[column_name].tolist()

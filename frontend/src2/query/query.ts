@@ -116,6 +116,12 @@ export function makeQuery(workbookQuery: WorkbookQuery) {
 		reset,
 
 		history: {} as UseRefHistoryReturn<any, any>,
+		canUndo() {
+			return !query.activeEditIndex && !query.executing
+		},
+		canRedo() {
+			return !query.activeEditIndex && !query.executing
+		},
 	})
 
 	query.activeOperationIdx = query.doc.operations.length - 1
@@ -304,6 +310,13 @@ export function makeQuery(workbookQuery: WorkbookQuery) {
 				query.setOperations([])
 				query.addSource(args)
 			}
+
+			if (args.table.type == 'query') {
+				const sourceQuery = getCachedQuery(args.table.query_name)
+				if (sourceQuery) {
+					query.doc.use_live_connection = sourceQuery.doc.use_live_connection
+				}
+			}
 		}
 		if (!query.doc.operations.length || editingSource) {
 			_setSource()
@@ -451,8 +464,19 @@ export function makeQuery(workbookQuery: WorkbookQuery) {
 	}
 
 	function removeColumn(column_names: string | string[]) {
-		if (!Array.isArray(column_names)) column_names = [column_names]
-		addOperation(remove({ column_names }))
+		if (!Array.isArray(column_names)) {
+			column_names = [column_names]
+		}
+
+		// if last operation is remove operation, append to it
+		const lastOperation = query.doc.operations[query.activeOperationIdx]
+		if (lastOperation?.type === 'remove') {
+			query.doc.operations[query.activeOperationIdx] = remove({
+				column_names: [...lastOperation.column_names, ...column_names],
+			})
+		} else {
+			addOperation(remove({ column_names }))
+		}
 	}
 
 	function changeColumnType(column_name: string, newType: ColumnDataType) {
@@ -578,7 +602,7 @@ export function makeQuery(workbookQuery: WorkbookQuery) {
 		})
 	}
 
-	function getDistinctColumnValues(column: string, search_term: string = '') {
+	function getDistinctColumnValues(column: string, search_term: string = '', limit: number = 20) {
 		const operationsForExecution = query.getOperationsForExecution()
 		const operations =
 			query.activeEditIndex > -1
@@ -591,6 +615,7 @@ export function makeQuery(workbookQuery: WorkbookQuery) {
 			operations: operations,
 			column_name: column,
 			search_term,
+			limit,
 		})
 	}
 

@@ -5,7 +5,11 @@ import frappe
 from frappe.core.doctype.role.role import get_users as get_users_with_role
 from frappe.model.document import Document
 from frappe.utils.caching import site_cache
+from ibis import _
 
+from insights.insights.doctype.insights_data_source_v3.ibis_utils import (
+    exec_with_return,
+)
 from insights.insights.doctype.insights_table_v3.insights_table_v3 import get_table_name
 
 
@@ -31,6 +35,9 @@ class InsightsTeam(Document):
     # end: auto-generated types
 
     def validate(self):
+        if frappe.flags.in_migrate or frappe.flags.in_install:
+            return
+
         if self.team_name == "Admin":
             if frappe.flags.in_import:
                 pass
@@ -139,6 +146,43 @@ class InsightsTeam(Document):
         )
 
         return list(set(allowed_tables + allowed_tables_of_unrestricted_sources))
+
+
+def update_admin_team(user, method=None):
+    try:
+        if not frappe.db.get_single_value(
+            "Insights Settings", "enable_permissions", cache=True
+        ):
+            return
+
+        if not user.has_value_changed("roles"):
+            return
+
+        roles = user.get("roles", [])
+        is_user = next((True for role in roles if role.role == "Insights User"), False)
+        if not is_user:
+            return
+
+        admin_members = admin_team_members()
+        is_admin = next(
+            (True for role in roles if role.role == "Insights Admin"), False
+        )
+
+        if not is_admin and user.name in admin_members:
+            frappe.db.delete(
+                "Insights Team Member",
+                {
+                    "parent": "Admin",
+                    "user": user.name,
+                },
+            )
+        if is_admin and user.name not in admin_team_members():
+            team = frappe.get_cached_doc("Insights Team", "Admin")
+            team.append("team_members", {"user": user.name})
+            team.save(ignore_permissions=True)
+
+    except Exception:
+        frappe.log_error(title="update_admin_team")
 
 
 def clear_cache():
@@ -264,6 +308,43 @@ def check_table_permission(data_source, table, user=None, raise_error=True):
     return True
 
 
+def get_table_restrictions(data_source, table, user=None):
+    if not frappe.db.get_single_value("Insights Settings", "enable_permissions"):
+        return []
+
+    user = user or frappe.session.user
+    if is_admin(user):
+        return []
+
+    table_name = get_table_name(data_source, table)
+    table_restrictions = frappe.get_all(
+        "Insights Resource Permission",
+        filters={
+            "parent": ["in", get_teams(user)],
+            "resource_name": table_name,
+            "resource_type": "Insights Table v3",
+            "table_restrictions": ["is", "set"],
+        },
+        pluck="table_restrictions",
+    )
+    return table_restrictions
+
+
+def apply_table_restrictions(table, data_source, table_name):
+    restrictions = get_table_restrictions(data_source, table_name)
+    if not restrictions:
+        return table
+
+    filters = restrictions
+    table_columns = table.schema().names
+    table_columns_dict = {column: getattr(_, column) for column in table_columns}
+    for filter_expression in filters:
+        filter_expression = filter_expression.strip()
+        table = table.filter(exec_with_return(filter_expression, table_columns_dict))
+
+    return table
+
+
 def remove_admin_role(users):
     for user in users:
         frappe.db.delete(
@@ -278,4 +359,17 @@ def remove_admin_role(users):
 
 def give_admin_role(users):
     for user in users:
-        frappe.get_doc("User", user).add_roles("Insights Admin")
+        if not has_admin_role(user):
+            u = frappe.get_doc("User", user)
+            u.add_roles("Insights Admin")
+
+
+def has_admin_role(user):
+    return frappe.db.exists(
+        "Has Role",
+        {
+            "parent": user,
+            "parenttype": "User",
+            "role": "Insights Admin",
+        },
+    )

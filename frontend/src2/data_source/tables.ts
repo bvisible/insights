@@ -2,20 +2,50 @@ import { call } from 'frappe-ui'
 import { reactive, ref } from 'vue'
 import { showErrorToast } from '../helpers'
 import { createToast } from '../helpers/toasts'
-import { QueryResultColumn } from '../types/query.types'
+import { QueryResultColumn, QueryResultRow } from '../types/query.types'
 
-export type DataSourceTable = { table_name: string; data_source: string }
+export type DataSourceTable = {
+	name: string
+	table_name: string
+	data_source: string
+	preview?: any[]
+}
 const tables = ref<DataSourceTable[]>([])
 
 const loading = ref(false)
-async function getTables(data_source?: string, search_term?: string) {
+async function getTables(data_source?: string, search_term?: string, limit: number = 100) {
 	loading.value = true
 	tables.value = await call('insights.api.data_sources.get_data_source_tables', {
 		data_source,
 		search_term,
+		limit,
 	})
 	loading.value = false
 	return tables.value
+}
+
+const fetchingTable = ref(false)
+export type DataSourceTablePreview = {
+	table_name: string
+	data_source: string
+	columns: QueryResultColumn[]
+	rows: QueryResultRow[]
+}
+async function fetchTable(
+	data_source: string,
+	table_name: string
+): Promise<DataSourceTablePreview> {
+	fetchingTable.value = true
+	return call('insights.api.data_sources.get_data_source_table', {
+		data_source,
+		table_name,
+	})
+		.catch((e: Error) => {
+			showErrorToast(e)
+		})
+		.finally(() => {
+			fetchingTable.value = false
+		})
 }
 
 async function getTableColumns(data_source: string, table_name: string) {
@@ -76,9 +106,13 @@ export default function useTableStore() {
 		tables,
 		loading,
 		getTables,
+
 		getTableColumns,
 		updatingDataSourceTables,
 		updateDataSourceTables,
 		getTableLinks,
+
+		fetchingTable,
+		fetchTable,
 	})
 }
