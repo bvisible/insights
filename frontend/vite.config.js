@@ -28,11 +28,12 @@ export default defineConfig({
 	build: {
 		outDir: `../insights/public/frontend`,
 		emptyOutDir: true,
-		sourcemap: true,
+		sourcemap: false,
 		commonjsOptions: {
 			include: [/tailwind.config.js/, /node_modules/],
 		},
 		rollupOptions: {
+			maxParallelFileOps: 2,
 			input: {
 				main: path.resolve(__dirname, 'index.html'),
 				insights_v2: path.resolve(__dirname, 'index_v2.html'),
