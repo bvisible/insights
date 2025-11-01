@@ -6,6 +6,7 @@ import frappe
 import ibis
 import numpy as np
 import pandas as pd
+import sqlparse
 from frappe.utils.data import flt
 from frappe.utils.safe_exec import safe_eval, safe_exec
 from ibis import _
@@ -177,10 +178,11 @@ class IbisQueryBuilder:
                     "t2": right_table,
                 },
             )
-            right_table_columns = self.get_columns_from_expression(
-                expression, table=join_args.table.table_name
-            )
-            select_columns.update(right_table_columns)
+            columns_from_exp = self.get_columns_from_expression(expression)
+            if columns_from_exp:
+                # filter columns to only include those that exist in right_table
+                columns_from_exp = [col for col in columns_from_exp if col in right_table.columns]
+                select_columns.update(columns_from_exp)
 
         return right_table.select(select_columns)
 
@@ -203,12 +205,7 @@ class IbisQueryBuilder:
 
     def translate_join_condition(self, join_args, right_table):
         def left_eq_right_condition(left_column, right_column):
-            if (
-                left_column
-                and right_column
-                and left_column.column_name
-                and right_column.column_name
-            ):
+            if left_column and right_column and left_column.column_name and right_column.column_name:
                 rt = right_table
                 lc = getattr(self.query, left_column.column_name)
                 rc = getattr(rt, right_column.column_name)
@@ -258,9 +255,7 @@ class IbisQueryBuilder:
 
             return f"{new_name}_{n}"
 
-        return right_table.rename(
-            **{get_new_name(col): col for col in duplicate_columns}
-        )
+        return right_table.rename(**{get_new_name(col): col for col in duplicate_columns})
 
     def apply_union(self, union_args):
         other_table = self.get_table_or_query(union_args.table)
@@ -305,18 +300,34 @@ class IbisQueryBuilder:
             frappe.throw(f"Operator {filter_operator} is not supported")
 
         right_column = (
-            self.get_column(filter_value.column_name)
-            if hasattr(filter_value, "column_name")
-            else None
+            self.get_column(filter_value.column_name) if hasattr(filter_value, "column_name") else None
         )
 
         if filter_operator in ["contains", "not_contains"]:
             filter_value = filter_value.replace("%", "")
 
+        if filter_operator == "between":
+            start = filter_value[0]
+            end = filter_value[1]
+
+            if isinstance(start, str) and isinstance(end, str):
+                contains_time = ":" in start or ":" in end
+                if not contains_time:
+                    start = f"{start} 00:00:00"
+                    end = f"{end} 23:59:59"
+
+            filter_value = [start, end]
+
         right_value = right_column or filter_value
         return operator_fn(left, right_value)
 
     def get_operator(self, operator):
+        def null_check(is_null, x):
+            rt = x.isnull() if is_null else x.notnull()
+            if x.type().is_string():
+                rt = rt & (x != "")
+            return rt
+
         return {
             ">": lambda x, y: x > y,
             "<": lambda x, y: x < y,
@@ -326,8 +337,8 @@ class IbisQueryBuilder:
             "<=": lambda x, y: x <= y,
             "in": lambda x, y: x.isin(y),
             "not_in": lambda x, y: ~x.isin(y),
-            "is_set": lambda x, y: (x.notnull()) & (x != ""),
-            "is_not_set": lambda x, y: (x.isnull()) | (x == ""),
+            "is_set": lambda x, y: null_check(False, x),
+            "is_not_set": lambda x, y: null_check(True, x),
             "contains": lambda x, y: x.like(f"%{y}%"),
             "not_contains": lambda x, y: ~x.like(f"%{y}%"),
             "starts_with": lambda x, y: x.like(f"{y}%"),
@@ -361,9 +372,18 @@ class IbisQueryBuilder:
         return self.query.rename(**{new_name: old_name})
 
     def apply_remove(self, remove_args):
-        to_remove = {self.get_column(col) for col in remove_args.column_names}
-        to_remove = {col.get_name() for col in to_remove}
-        return self.query.drop(*to_remove)
+        # Get valid columns that exist in the query
+        valid_columns = []
+        for column_name in remove_args.column_names:
+            column = self.get_column(column_name, throw=False)
+            if column is not None:
+                valid_columns.append(column.get_name())
+
+        # If no valid columns to remove, return the original query
+        if not valid_columns:
+            return self.query
+
+        return self.query.drop(*valid_columns)
 
     def apply_cast(self, cast_args):
         col_name = self.get_column(cast_args.column.column_name).get_name()
@@ -379,24 +399,23 @@ class IbisQueryBuilder:
             "Datetime": "timestamp",
             "Time": "time",
             "Text": "string",
+            "JSON": "json",
+            "Array": "array<json>",
+            "Auto": "",
         }[data_type]
 
     def apply_mutate(self, mutate_args):
         new_name = sanitize_name(mutate_args.new_name)
-        dtype = self.get_ibis_dtype(mutate_args.data_type)
         new_column = self.evaluate_expression(mutate_args.expression.expression)
-        new_column = new_column.cast(dtype)
+        dtype = self.get_ibis_dtype(mutate_args.data_type)
+        if dtype:
+            new_column = new_column.cast(dtype)
         return self.query.mutate(**{new_name: new_column})
 
     def apply_summary(self, summarize_args):
-        aggregates = [
-            self.translate_measure(measure) for measure in summarize_args.measures
-        ]
+        aggregates = [self.translate_measure(measure) for measure in summarize_args.measures]
         aggregates = {agg.get_name(): agg for agg in aggregates}
-        group_bys = [
-            self.translate_dimension(dimension)
-            for dimension in summarize_args.dimensions
-        ]
+        group_bys = [self.translate_dimension(dimension) for dimension in summarize_args.dimensions]
         return self.query.aggregate(**aggregates, by=group_bys)
 
     def apply_order_by(self, order_by_args):
@@ -411,9 +430,7 @@ class IbisQueryBuilder:
 
     def apply_pivot(self, pivot_args, pivot_type):
         rows = [self.translate_dimension(dimension) for dimension in pivot_args["rows"]]
-        columns = [
-            self.translate_dimension(dimension) for dimension in pivot_args["columns"]
-        ]
+        columns = [self.translate_dimension(dimension) for dimension in pivot_args["columns"]]
         values = [self.translate_measure(measure) for measure in pivot_args["values"]]
 
         if pivot_type == "wider":
@@ -427,21 +444,13 @@ class IbisQueryBuilder:
                 if self.is_date_type(dim.data_type)
             ]
             if date_dimensions:
-                self.query = self.query.cast(
-                    {dimension: "string" for dimension in date_dimensions}
-                )
+                self.query = self.query.cast({dimension: "string" for dimension in date_dimensions})
 
             names_from = [col.get_name() for col in columns]
             max_names = pivot_args.get("max_column_values", 10)
             max_names = int(max_names)
             max_names = max(1, min(max_names, 100))
-            names = (
-                self.query.select(names_from)
-                .order_by(names_from)
-                .distinct()
-                .limit(max_names)
-                .execute()
-            )
+            names = self.query.select(names_from).order_by(names_from).distinct().limit(max_names).execute()
             names = names.fillna("null").values
 
             return self.query.pivot_wider(
@@ -465,9 +474,9 @@ class IbisQueryBuilder:
         ds = frappe.get_doc("Insights Data Source v3", data_source)
         db = ds._get_ibis_backend()
 
-        if ds.enable_stored_procedure_execution and raw_sql.strip().lower().startswith(
-            "exec"
-        ):
+        raw_sql = sqlparse.format(sql=raw_sql, strip_comments=True)
+
+        if ds.enable_stored_procedure_execution and raw_sql.strip().lower().startswith("exec"):
             current_date = date.today().strftime("%Y-%m-%d")  # Format: 'YYYY-MM-DD'
             raw_sql = raw_sql.replace("@Today", f"'{current_date}'")
 
@@ -493,8 +502,19 @@ class IbisQueryBuilder:
 
     def apply_code(self, code_args):
         code = code_args.code
-        digest = make_digest(code)
-        results = get_code_results(code, digest)
+
+        adhoc_filters = frappe.as_json(getattr(frappe.local, "insights_adhoc_filters", {}))
+        digest = make_digest(code + adhoc_filters)
+
+        cached_results = get_cached_results(digest)
+        if cached_results is not None:
+            results = cached_results
+        else:
+            variables = None
+            if hasattr(self.doc, "variables") and self.doc.variables:
+                variables = self.doc.variables
+            results = get_code_results(code, variables=variables)
+            cache_results(digest, results, cache_expiry=60 * 5)
 
         return Warehouse().db.create_table(
             digest,
@@ -569,6 +589,8 @@ class IbisQueryBuilder:
 
         frappe.flags.current_ibis_query = self.query
         context = frappe._dict()
+        context.pandas = frappe._dict()
+        context.pandas.DataFrame = SafePandasDataFrame
         context.q = self.query
         context.update(self.get_current_columns())
         context.update(get_functions())
@@ -585,19 +607,24 @@ class IbisQueryBuilder:
 def execute_ibis_query(
     query: IbisQuery,
     limit=100,
+    force=False,
     cache=True,
     cache_expiry=3600,
     reference_doctype=None,
     reference_name=None,
 ):
-    sql = ibis.to_sql(query)
+    try:
+        sql = ibis.to_sql(query)
+    except ibis.common.exceptions.OperationNotDefinedError:
+        # TODO: throw better error message
+        raise
 
     if cache:
         backends, _ = query._find_backends()
         backend_id = backends[0].db_identity if backends else None
         cache_key = make_digest(sql, backend_id)
 
-        if has_cached_results(cache_key):
+        if has_cached_results(cache_key) and not force:
             return get_cached_results(cache_key), -1
 
     if hasattr(query, "limit") and limit:
@@ -657,6 +684,10 @@ def to_insights_type(dtype: DataType):
         return "Date"
     if dtype.is_time():
         return "Time"
+    if dtype.is_json():
+        return "JSON"
+    if dtype.is_array():
+        return "Array"
     return "String"
 
 
@@ -736,21 +767,40 @@ def sanitize_name(name):
     )
 
 
-def get_code_results(code: str, digest: str):
+class SafePandasDataFrame(pd.DataFrame):
+    def to_csv(self, *args, **kwargs):
+        raise NotImplementedError("to_csv is not supported in this context")
+
+    def to_json(self, *args, **kwargs):
+        raise NotImplementedError("to_json is not supported in this context")
+
+
+def get_code_results(code: str, variables=None):
     pandas = frappe._dict()
-    pandas.DataFrame = pd.DataFrame
+    pandas.DataFrame = SafePandasDataFrame
     pandas.read_csv = pd.read_csv
     pandas.json_normalize = pd.json_normalize
-    # prevent users from writing to disk
-    pandas.DataFrame.to_csv = lambda *args, **kwargs: None
-    pandas.DataFrame.to_json = lambda *args, **kwargs: None
 
     results = []
     frappe.debug_log = []
+
+    variable_context = {}
+    if variables:
+        from frappe.utils.password import get_decrypted_password
+
+        for var in variables:
+            if hasattr(var, "variable_name") and hasattr(var, "variable_value"):
+                variable_context[var.variable_name] = get_decrypted_password(
+                    var.doctype, var.name, "variable_value"
+                )
+            elif isinstance(var, dict):
+                variable_context[var.get("variable_name")] = var.get("variable_value")
+
+    _locals = {"results": results, **variable_context}
     _, _locals = safe_exec(
         code,
         _globals={"pandas": pandas},
-        _locals={"results": results},
+        _locals=_locals,
         restrict_commit_rollback=True,
     )
     results = _locals["results"]

@@ -1,9 +1,10 @@
 import { call } from 'frappe-ui'
-import { computed, InjectionKey, reactive, ref, toRefs } from 'vue'
+import { computed, InjectionKey, reactive, toRefs } from 'vue'
 import useChart, { newChart } from '../charts/chart'
 import useDashboard, { newDashboard } from '../dashboard/dashboard'
 import {
 	copy,
+	copyToClipboard,
 	getUniqueId,
 	safeJSONParse,
 	showErrorToast,
@@ -12,6 +13,7 @@ import {
 } from '../helpers'
 import { confirmDialog } from '../helpers/confirm_dialog'
 import useDocumentResource from '../helpers/resource'
+import { createToast } from '../helpers/toasts'
 import useQuery, { newQuery } from '../query/query'
 import router from '../router'
 import session from '../session'
@@ -56,10 +58,14 @@ function makeWorkbook(name: string) {
 		query.doc.title = 'Query ' + (workbook.doc.queries.length + 1)
 		query.doc.workbook = workbook.doc.name
 		query.doc.use_live_connection = true
+		query.doc.sort_order = workbook.doc.queries.length
+		query.doc.folder = null
 		query.insert().then(() => {
 			workbook.doc.queries.push({
 				name: query.doc.name,
 				title: query.doc.title,
+				sort_order: query.doc.sort_order,
+				folder: null,
 			})
 			setActiveTab('query', query.doc.name)
 		})
@@ -90,12 +96,16 @@ function makeWorkbook(name: string) {
 		chart.doc.workbook = workbook.doc.name
 		chart.doc.query = query_name || ''
 		chart.doc.chart_type = 'Bar'
+		chart.doc.sort_order = workbook.doc.charts.length
+		chart.doc.folder = null
 		chart.insert().then(() => {
 			workbook.doc.charts.push({
 				name: chart.doc.name,
 				title: chart.doc.title,
 				query: chart.doc.query,
 				chart_type: 'Bar',
+				sort_order: chart.doc.sort_order,
+				folder: null,
 			})
 			setActiveTab('chart', chart.doc.name)
 		})
@@ -213,6 +223,67 @@ function makeWorkbook(name: string) {
 		}).catch(showErrorToast)
 	}
 
+	function duplicate() {
+		confirmDialog({
+			title: 'Duplicate Workbook',
+			message: 'Duplicating this workbook will create a new workbook and copy all queries, charts and dashboards to it. Do you want to continue?',
+			onSuccess: () => {
+				workbook.call('duplicate')
+				.then((name: any) => {
+					createToast({
+						message: 'Workbook duplicated successfully',
+						variant: 'success',
+					})
+					// FIX: debug why new workbook is not loaded
+					router.push(`/workbook/${name}`)
+				})
+				.catch(showErrorToast)
+			},
+		})
+	}
+
+	function importQuery(query: any) {
+		confirmDialog({
+			title: 'Import Query',
+			message: 'Are you sure you want to import this query?',
+			onSuccess: () => {
+				workbook.call('import_query', { query }).then((name) => {
+					workbook.load().then(() => {
+						createToast({
+							message: 'Query imported successfully',
+							variant: 'success',
+						})
+						setActiveTab('query', name)
+					})
+				})
+			},
+		})
+	}
+
+	function importChart(chart: any) {
+		confirmDialog({
+			title: 'Import Chart',
+			message: 'Are you sure you want to import this chart?',
+			onSuccess: () => {
+				workbook.call('import_chart', { chart }).then((name) => {
+					workbook.load().then(() => {
+						createToast({
+							message: 'Chart imported successfully',
+							variant: 'success',
+						})
+						setActiveTab('chart', name)
+					})
+				})
+			},
+		})
+	}
+
+	function copyJSON() {
+		workbook.call('export').then(data => {
+			copyToClipboard(JSON.stringify(data, null, 2))
+		})
+	}
+
 	function deleteWorkbook() {
 		confirmDialog({
 			title: 'Delete Workbook',
@@ -226,6 +297,71 @@ function makeWorkbook(name: string) {
 		})
 	}
 
+	async function addFolder(title: string = 'New Folder', folderType: 'query' | 'chart') {
+		const method = 'insights.api.workbooks.create_folder'
+		return call(method, { workbook: workbook.name, title, folder_type: folderType })
+			.then((folder_name: string) => {
+				workbook.load().then(() => {
+					createToast({
+						message: 'Folder created',
+						variant: 'success',
+					})
+				})
+				return folder_name
+			})
+			.catch(showErrorToast)
+	}
+
+	function removeFolder(folderName: string) {
+		function _remove() {
+			const method = 'insights.api.workbooks.delete_folder'
+			call(method, { folder_name: folderName, move_items_to_root: true })
+				.then(() => {
+					workbook.load()
+					createToast({
+						message: 'Folder deleted',
+						variant: 'success',
+					})
+				})
+				.catch(showErrorToast)
+		}
+
+		confirmDialog({
+			title: 'Delete Folder',
+			message: 'This will move all items in the folder to the root. Continue?',
+			onSuccess: _remove,
+		})
+	}
+
+	async function renameFolder(folderName: string, newTitle: string) {
+		const method = 'insights.api.workbooks.rename_folder'
+		return call(method, { folder_name: folderName, new_title: newTitle })
+			.then(() => {
+				workbook.load()
+			})
+			.catch(showErrorToast)
+	}
+
+	async function moveItemToFolder(
+		itemType: 'query' | 'chart',
+		itemName: string,
+		folderName?: string
+	) {
+		const method = 'insights.api.workbooks.move_item_to_folder'
+		return call(method, {
+			item_type: itemType,
+			item_name: itemName,
+			folder_name: folderName || null,
+		})
+			.then(() => workbook.load())
+			.catch(showErrorToast)
+	}
+
+	async function updateSortOrder(items: Array<{ type: string; name: string; sort_order: number; folder?: string | null }>) {
+		const method = 'insights.api.workbooks.update_sort_orders'
+		return call(method, { workbook: workbook.name, items }).catch(showErrorToast)
+	}
+
 	return reactive({
 		...toRefs(workbook),
 		canShare,
@@ -234,6 +370,10 @@ function makeWorkbook(name: string) {
 		showSidebar: true,
 
 		isActiveTab,
+
+		duplicate,
+		importQuery,
+		importChart,
 
 		addQuery,
 		removeQuery,
@@ -244,10 +384,18 @@ function makeWorkbook(name: string) {
 		addDashboard,
 		removeDashboard,
 
+		addFolder,
+		removeFolder,
+		renameFolder,
+		moveItemToFolder,
+		updateSortOrder,
+
 		getSharePermissions,
 		updateSharePermissions,
 
 		getLinkedQueries,
+
+		copy: copyJSON,
 
 		delete: deleteWorkbook,
 	})
@@ -264,6 +412,7 @@ export function getWorkbookResource(name: string) {
 			name,
 			owner: '',
 			title: '',
+			folders: [],
 			queries: [],
 			charts: [],
 			dashboards: [],
@@ -272,6 +421,7 @@ export function getWorkbookResource(name: string) {
 		enableAutoSave: true,
 		disableLocalStorage: true,
 		transform(doc: any) {
+			doc.folders = safeJSONParse(doc.folders) || []
 			doc.queries = safeJSONParse(doc.queries) || []
 			doc.charts = safeJSONParse(doc.charts) || []
 			doc.dashboards = safeJSONParse(doc.dashboards) || []

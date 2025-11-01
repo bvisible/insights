@@ -4,6 +4,7 @@ import frappe
 import ibis
 import ibis.expr.types as ir
 import ibis.selectors as s
+from frappe.utils import now_datetime
 from ibis import _
 
 from insights.insights.query_builders.sql_functions import handle_timespan
@@ -39,9 +40,7 @@ def count(
     return column.count(where=where)
 
 
-def count_if(
-    condition: ir.BooleanValue, column: ir.Column = None, group_by=None, order_by=None
-):
+def count_if(condition: ir.BooleanValue, column: ir.Column = None, group_by=None, order_by=None):
     """
     def count_if(condition)
 
@@ -175,9 +174,7 @@ def group_concat(column: ir.Column, sep: str = ",", where: ir.BooleanValue = Non
     return column.group_concat(sep=sep, where=where)
 
 
-def distinct_count(
-    column: ir.Column, where: ir.BooleanValue = None, group_by=None, order_by=None
-):
+def distinct_count(column: ir.Column, where: ir.BooleanValue = None, group_by=None, order_by=None):
     """
     def distinct_count(column, where=None)
 
@@ -309,9 +306,7 @@ def if_else(condition: ir.BooleanValue, true_value: ir.Value, false_value: ir.Va
     return ibis.case().when(condition, true_value).else_(false_value).end()
 
 
-def case(
-    condition: ir.BooleanValue, value: ir.Value, *args: tuple[ir.BooleanValue, ir.Value]
-):
+def case(condition: ir.BooleanValue, value: ir.Value, *args: tuple[ir.BooleanValue, ir.Value]):
     """
     def case(condition, value, *args)
 
@@ -677,11 +672,7 @@ def format_date(column: ir.DateValue, format_str: str):
     return column.strftime(format_str)
 
 
-def date_diff(
-    column: ir.DateValue,
-    other: ir.DateValue,
-    unit: str,
-):
+def date_diff(column: ir.DateValue, other: ir.DateValue, unit: str = "day"):
     """
     def date_diff(column, other, unit)
 
@@ -697,13 +688,13 @@ def date_diff(
     if not other.type().is_date():
         other = other.cast("date")
 
-    return column.delta(other, unit)
+    return column.delta(other, unit=unit)
 
 
 def time_diff(
     column: ir.TimeValue,
     other: ir.TimeValue,
-    unit: str,
+    unit: str = "second",
 ):
     """
     def time_diff(column, other, unit)
@@ -720,7 +711,7 @@ def time_diff(
     if not other.type().is_time():
         other = other.cast("time")
 
-    return column.delta(other, unit)
+    return column.delta(other, unit=unit)
 
 
 def date_add(column: ir.DateValue, value: int, unit: str):
@@ -768,12 +759,12 @@ def now():
     """
     def now()
 
-    Get the current timestamp.
+    Get the current timestamp based on site's system timezone
 
     Examples:
     - now()
     """
-    return ibis.now()
+    return ibis.literal(now_datetime())
 
 
 def today():
@@ -950,9 +941,7 @@ def previous_period_value(column: ir.Column, date_column: ir.DateColumn, offset=
     - previous_period_value(amount, date)
     - previous_period_value(amount, date, 2)
     """
-    date_column_name = (
-        date_column.get_name() if hasattr(date_column, "get_name") else date_column
-    )
+    date_column_name = date_column.get_name() if hasattr(date_column, "get_name") else date_column
     return column.lag(offset).over(
         group_by=(~s.numeric() & ~s.matches(date_column_name)),
         order_by=ibis.asc(date_column_name),
@@ -969,9 +958,7 @@ def next_period_value(column: ir.Column, date_column: ir.DateColumn, offset=1):
     - next_period_value(amount, date)
     - next_period_value(amount, date, 2)
     """
-    date_column_name = (
-        date_column.get_name() if hasattr(date_column, "get_name") else date_column
-    )
+    date_column_name = date_column.get_name() if hasattr(date_column, "get_name") else date_column
     return column.lead(offset).over(
         group_by=(~s.numeric() & ~s.matches(date_column_name)),
         order_by=ibis.asc(date_column_name),
@@ -989,7 +976,7 @@ def percentage_change(column: ir.Column, date_column: ir.DateColumn, offset=1):
     - percentage_change(amount, date, 2)
     """
     prev_value = previous_period_value(column, date_column, offset)
-    return ((column - prev_value) * 100) / prev_value
+    return ((column - prev_value) * 100) / abs(prev_value)
 
 
 def is_first_row(group_by=None, order_by=None, sort_order="asc"):
@@ -1089,9 +1076,7 @@ def week_start(column: ir.DateValue):
     - week_start(order_date)
     """
 
-    week_start_day = (
-        frappe.db.get_single_value("Insights Settings", "week_starts_on") or "Monday"
-    )
+    week_start_day = frappe.db.get_single_value("Insights Settings", "week_starts_on") or "Monday"
     days = [
         "Monday",
         "Tuesday",
@@ -1104,7 +1089,7 @@ def week_start(column: ir.DateValue):
     week_starts_on = days.index(week_start_day)
     day_of_week = column.day_of_week.index().cast("int32")
     adjusted_week_start = (day_of_week - week_starts_on + 7) % 7
-    week_start = column - adjusted_week_start.as_interval(unit="D")
+    week_start = column - adjusted_week_start.as_interval("D")
     return week_start
 
 
@@ -1153,6 +1138,29 @@ def year_start(column: ir.DateValue):
     return year_start
 
 
+def fiscal_year_start(column: ir.DateValue):
+    """
+    def fiscal_year_start(column)
+
+    Get the start date of the fiscal year for a given date.
+
+    Examples:
+    - fiscal_year_start(order_date)
+    """
+
+    fiscal_year_start_month = 4
+    fiscal_year_start_day = 1
+
+    year = column.year()
+    month = column.month()
+
+    return if_else(
+        month < fiscal_year_start_month,
+        ibis.date(year - 1, fiscal_year_start_month, fiscal_year_start_day),
+        ibis.date(year, fiscal_year_start_month, fiscal_year_start_day),
+    ).cast("date")
+
+
 def get_retention_data(date_column: ir.DateValue, id_column: ir.Column, unit: str):
     """
     def get_retention_data(date_column, id_column, unit)
@@ -1187,22 +1195,16 @@ def get_retention_data(date_column: ir.DateValue, id_column: ir.Column, unit: st
         "year": lambda column: column.strftime("%Y-01-01").cast("date"),
     }[unit]
 
-    query = query.mutate(
-        cohort_start=unit_start(date_column).min().over(group_by=id_column)
-    )
+    query = query.mutate(cohort_start=unit_start(date_column).min().over(group_by=id_column))
 
-    query = query.mutate(
-        cohort_size=id_column.nunique().over(group_by=query.cohort_start)
-    )
+    query = query.mutate(cohort_size=id_column.nunique().over(group_by=query.cohort_start))
 
-    query = query.mutate(offset=date_column.delta(query.cohort_start, unit))
+    query = query.mutate(offset=date_column.delta(query.cohort_start, unit=unit))
 
     zero_padded_offset = (query.offset < 10).ifelse(
         literal("0").concat(query.offset.cast("string")), query.offset.cast("string")
     )
-    query = query.mutate(
-        offset_label=ibis.literal(f"{unit}_").concat(zero_padded_offset)
-    )
+    query = query.mutate(offset_label=ibis.literal(f"{unit}_").concat(zero_padded_offset))
 
     query = query.group_by(["cohort_start", "cohort_size", "offset_label"]).aggregate(
         unique_ids=id_column.nunique()

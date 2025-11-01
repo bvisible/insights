@@ -50,11 +50,13 @@ function setDraggedItem(event: DragEvent, row: any) {
 					class="flex h-7.5 items-center justify-between rounded pl-1.5 text-sm"
 				>
 					<div class="flex gap-1.5 overflow-hidden">
-						<slot name="item-icon" :item="row" />
+						<div class="flex-shrink-0">
+							<slot name="item-icon" :item="row" />
+						</div>
 						<p class="truncate">{{ row.title }}</p>
 					</div>
 					<button
-						class="invisible cursor-pointer rounded p-1 transition-all hover:bg-gray-100 group-hover:visible"
+						class="invisible cursor-pointer rounded px-1.5 py-1 transition-all hover:bg-gray-100 group-hover:visible"
 						@click.prevent.stop="section.remove(row)"
 					>
 						<X class="h-4 w-4 text-gray-700" stroke-width="1.5" />

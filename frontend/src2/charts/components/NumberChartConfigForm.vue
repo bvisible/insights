@@ -2,7 +2,6 @@
 import ColorInput from '@/components/Controls/ColorInput.vue'
 import { debounce } from 'frappe-ui'
 import { computed, watchEffect } from 'vue'
-import Checkbox from '../../components/Checkbox.vue'
 import DraggableList from '../../components/DraggableList.vue'
 import InlineFormControlLabel from '../../components/InlineFormControlLabel.vue'
 import { FIELDTYPES } from '../../helpers/constants'
@@ -28,7 +27,7 @@ const config = defineModel<NumberChartConfig>({
 })
 
 const date_dimensions = computed(() =>
-	props.dimensions.filter((d) => FIELDTYPES.DATE.includes(d.data_type))
+	props.dimensions.filter((d) => FIELDTYPES.DATE.includes(d.data_type)),
 )
 
 watchEffect(() => {
@@ -108,6 +107,15 @@ function setNumberOption(index: number, option: keyof NumberColumnOptions, value
 											type="number"
 										/>
 									</InlineFormControlLabel>
+									<InlineFormControlLabel label="Color">
+										<ColorInput
+											:model-value="getNumberOption(index, 'color')"
+											@update:model-value="
+												setNumberOption(index, 'color', $event)
+											"
+											placement="left-start"
+										/>
+									</InlineFormControlLabel>
 
 									<Toggle
 										label="Show short numbers"
@@ -132,7 +140,7 @@ function setNumberOption(index: number, option: keyof NumberColumnOptions, value
 			<DimensionPicker
 				label="Date"
 				:options="date_dimensions"
-				:model-value="(config.date_column as Dimension)"
+				:model-value="config.date_column as Dimension"
 				@update:model-value="config.date_column = $event || {}"
 			/>
 
@@ -148,13 +156,19 @@ function setNumberOption(index: number, option: keyof NumberColumnOptions, value
 
 			<Toggle label="Show short numbers" v-model="config.shorten_numbers" />
 
-			<Toggle label="Show comparison" v-model="config.comparison" />
+			<Toggle
+				v-if="config.date_column?.column_name"
+				label="Show comparison"
+				v-model="config.comparison"
+			/>
+
 			<Toggle
 				v-if="config.comparison"
 				label="Negative is better"
 				v-model="config.negative_is_better"
 			/>
-			<Toggle v-if="config.date_column" label="Show sparkline" v-model="config.sparkline" />
+
+			<Toggle v-if="config.comparison" label="Show sparkline" v-model="config.sparkline" />
 
 			<InlineFormControlLabel v-if="config.sparkline" label="Color">
 				<ColorInput

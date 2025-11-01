@@ -93,15 +93,7 @@ export function watchToggle(source: WatchSource, callback: WatchCallback, option
 }
 
 function _watch(source: WatchSource, callback: WatchCallback, options: WatchOptions = {}) {
-	let _callback: WatchCallback
-	let prevVal: any
-
-	_callback = (val, _, cleanup) => {
-		if (!isEqual(val, prevVal)) {
-			prevVal = copy(val)
-			callback(val, prevVal, cleanup)
-		}
-	}
+	let _callback = callback
 
 	if (options.debounce) {
 		_callback = debounce(_callback, options.debounce)
@@ -199,6 +191,7 @@ export function guessPrecision(number: number) {
 	if (decimalIndex === -1) return 0
 	return Math.min(str.length - decimalIndex - 1, 2)
 }
+
 
 export function getShortNumber(number: number, precision = 0) {
 	const locale = session.user?.country == 'India' ? 'en-IN' : session.user?.locale
@@ -505,4 +498,19 @@ export function cachedCall(url: string, options?: any): Promise<any> {
 			callCache.delete(key)
 			throw err
 		})
+}
+
+export function toTitleCase(str: string): string {
+	if (!str) return str
+
+	return str
+		.replace(/&/g, 'and')
+		.toLowerCase()
+		.split(' ')
+		.map(word => {
+			if (word === 'and') return 'and'
+			return word.charAt(0).toUpperCase() + word.slice(1)
+		})
+		.join(' ')
+		.trim()
 }

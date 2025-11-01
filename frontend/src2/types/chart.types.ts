@@ -1,20 +1,26 @@
+import { FormatGroupArgs } from '../query/components/formatting_utils'
 import { Dimension, Measure } from './query.types'
 
 export const AXIS_CHARTS = ['Bar', 'Line', 'Row']
 export type AxisChartType = (typeof AXIS_CHARTS)[number]
 
-export const CHARTS = ['Number', ...AXIS_CHARTS, 'Donut', 'Funnel', 'Table']
+export const CHARTS = ['Number', ...AXIS_CHARTS, 'Donut', 'Funnel', 'Table', 'Map']
 export type ChartType = (typeof CHARTS)[number]
 
 export type AxisChartConfig = {
 	x_axis: XAxis
 	y_axis: YAxis
-	split_by?: Dimension
+	split_by?: SplitBy
 }
 
 export type XAxis = {
 	dimension: Dimension
 	label_rotation?: number
+}
+
+export type SplitBy = {
+	dimension: Dimension
+	max_split_values?: number
 }
 
 export type YAxis = {
@@ -24,6 +30,7 @@ export type YAxis = {
 	axis_label?: string
 	show_axis_label?: boolean
 	show_data_labels?: boolean
+	show_scrollbar?: boolean
 }
 export type Series = {
 	name?: string
@@ -38,6 +45,7 @@ export type YAxisLine = Series & {
 	smooth?: boolean
 	show_data_points?: boolean
 	show_area?: boolean
+
 }
 export type SeriesLine = Series & {
 	type: 'line'
@@ -49,6 +57,7 @@ export type YAxisBar = Series & {
 	series: SeriesBar[]
 	stack?: boolean
 	normalize?: boolean
+	overlap?: boolean
 }
 export type SeriesBar = Series & {
 	type: 'bar'
@@ -82,6 +91,7 @@ export type NumberColumnOptions = {
 	decimal?: number
 	prefix?: string
 	suffix?: string
+	color?: string
 }
 
 export type DonutChartConfig = {
@@ -105,7 +115,16 @@ export type TableChartConfig = {
 	show_filter_row?: boolean
 	show_row_totals?: boolean
 	show_column_totals?: boolean
+	compact_numbers?: boolean
 	enable_color_scale?: boolean
+	sticky_columns?: string[]
+	conditional_formatting?: FormatGroupArgs
+}
+
+export type MapChartConfig = {
+	location_column: Dimension
+	value_column: Measure
+	map_type?: 'world' | 'india'
 }
 
 export type ChartConfig =
@@ -115,3 +134,4 @@ export type ChartConfig =
 	| DonutChartConfig
 	| TableChartConfig
 	| FunnelChartConfig
+	| MapChartConfig

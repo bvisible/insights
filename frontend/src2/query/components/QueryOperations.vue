@@ -82,7 +82,9 @@ const JoinInfo = (props: any) => {
 const UnionInfo = (props: any) => {
 	const union = props.union as Union
 	const union_name =
-		union.table.type === 'table' ? union.table.table_name : union.table.query_name
+		union.table.type === 'table'
+			? union.table.table_name
+			: getQueryTitle(union.table.query_name)
 
 	return (
 		<div class="flex flex-wrap items-baseline gap-1 text-gray-700">
@@ -150,7 +152,7 @@ const CastInfo = (props: any) => {
 const FilterInfo = (props: any) => {
 	const group = props.filter as FilterGroup
 	const custom_expressions = group.filters.filter(
-		(f) => 'expression' in f && f.expression.expression
+		(f) => 'expression' in f && f.expression.expression,
 	)
 	const filtered_columns = group.filters
 		.filter((f) => 'column' in f)
@@ -256,7 +258,7 @@ const CustomOperationInfo = (props: any) => {
 					@dblclick="query.setActiveEditIndex(idx)"
 				>
 					<div
-						class="-ml-[14px] h-fit flex-shrink-0 rounded border border-gray-300 bg-white p-1"
+						class="-ml-[14px] h-fit flex-shrink-0 rounded border border-gray-400 bg-white p-1"
 					>
 						<component
 							:is="op.meta.icon"
@@ -286,11 +288,6 @@ const CustomOperationInfo = (props: any) => {
 							/>
 						</div>
 						<div
-							v-if="
-								query.activeOperationIdx === idx ||
-								(query.activeEditIndex === -1 &&
-									idx === query.doc.operations.length - 1)
-							"
 							class="absolute right-0 flex h-full flex-shrink-0 items-center bg-white opacity-0 transition-all group-hover:opacity-100"
 						>
 							<Button

@@ -2,12 +2,16 @@
 import { computed } from 'vue'
 import { formatNumber, getShortNumber } from '../../helpers'
 import { NumberChartConfig, NumberColumnOptions } from '../../types/chart.types'
-import { QueryResult } from '../../types/query.types'
+import { QueryResult, QueryResultColumn, QueryResultRow } from '../../types/query.types'
 import Sparkline from './Sparkline.vue'
 
 const props = defineProps<{
 	config: NumberChartConfig
 	result: QueryResult
+}>()
+
+const emit = defineEmits<{
+	drillDown: [column: QueryResultColumn, row: QueryResultRow]
 }>()
 
 const config = computed(() => props.config)
@@ -42,11 +46,12 @@ const cards = computed(() => {
 		const delta = config.value.negative_is_better
 			? previousValue - currentValue
 			: currentValue - previousValue
-		const percentDelta = (delta / previousValue) * 100
+		const percentDelta = (delta / Math.abs(previousValue)) * 100
 
 		const prefix = getNumberOption(idx, 'prefix')
 		const suffix = getNumberOption(idx, 'suffix')
 		const decimal = getNumberOption(idx, 'decimal')
+		const color = getNumberOption(idx, 'color')
 		const shorten_numbers = getNumberOption(idx, 'shorten_numbers')
 
 		return {
@@ -58,6 +63,7 @@ const cards = computed(() => {
 			percentDelta: getFormattedValue(percentDelta, decimal, shorten_numbers),
 			prefix,
 			suffix,
+			color,
 		}
 	})
 })
@@ -74,11 +80,21 @@ function getNumberOption(index: number, option: keyof NumberColumnOptions) {
 	const numberOption = config.value.number_column_options?.[index]?.[option] as any
 	return numberOption === undefined ? config.value[option] : numberOption
 }
+
+function onDoubleClick(measure_name: string) {
+	const column = props.result.columns.find((c) => c.name === measure_name)
+	const row = props.result.formattedRows.at(-1)
+	if (column && row) {
+		emit('drillDown', column, row)
+	}
+}
 </script>
 
 <template>
-	<div class="h-full w-full @container">
-		<div class="grid w-full grid-cols-[repeat(auto-fill,214px)] gap-4">
+	<div class="h-full w-full overflow-hidden p-[2px] @container">
+		<div
+			class="grid h-full w-full grid-cols-1 gap-4 @xs:grid-cols-2 @sm:grid-cols-2 @md:grid-cols-2 @lg:grid-cols-2 @xl:grid-cols-3 @3xl:grid-cols-4 @4xl:grid-cols-5"
+		>
 			<div
 				v-for="{
 					measure_name,
@@ -88,25 +104,38 @@ function getNumberOption(index: number, option: keyof NumberColumnOptions) {
 					percentDelta,
 					prefix,
 					suffix,
+					color,
 				} in cards"
 				:key="measure_name"
-				class="flex h-fit max-h-[140px] items-center gap-2 overflow-y-auto rounded bg-white px-6 pt-5 shadow"
+				class="flex max-h-[140px] items-center gap-2 overflow-hidden rounded bg-white px-6 pt-5 shadow cursor-pointer"
 				:class="config.comparison ? 'pb-6' : 'pb-3'"
+				@dblclick="onDoubleClick(measure_name)"
 			>
 				<div class="flex w-full flex-col">
 					<span class="truncate text-sm font-medium">
 						{{ measure_name }}
 					</span>
-					<div class="flex-1 flex-shrink-0 text-[24px] font-semibold leading-10">
+					<div
+						class="flex-1 flex-shrink-0 truncate text-[24px] font-semibold leading-10"
+						:style="color && typeof color === 'string' ? { color: color } : {}"
+					>
 						{{ prefix }}{{ currentValue }}{{ suffix }}
 					</div>
 					<div
 						v-if="config.comparison"
 						class="flex items-center gap-1 text-xs font-medium"
-						:class="delta >= 0 ? 'text-green-500' : 'text-red-500'"
+						:class="[
+							config.negative_is_better
+								? delta >= 0
+									? 'text-red-500'
+									: 'text-green-500'
+								: delta >= 0
+								  ? 'text-green-500'
+								  : 'text-red-500',
+						]"
 					>
 						<span class="">
-							{{ delta >= 0 && !config.negative_is_better ? '↑' : '↓' }}
+							{{ delta >= 0 ? '↑' : '↓' }}
 						</span>
 						<span> {{ percentDelta }}% </span>
 					</div>
