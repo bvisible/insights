@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-100">
+	<head>
+		<meta charset="UTF-8" />
+		<link rel="icon" href="/assets/insights/frontend/favicon.png" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Frappe Insights</title>
+		<script type="module" crossorigin src="/assets/insights/frontend/assets/main-002c2d22.js"></script>
+		<link rel="modulepreload" crossorigin href="/assets/insights/frontend/assets/frappe-ui-42d2f27a.js">
+		<link rel="modulepreload" crossorigin href="/assets/insights/frontend/assets/index-1ee943b4.js">
+		<link rel="modulepreload" crossorigin href="/assets/insights/frontend/assets/text-cursor-input-0eedaaea.js">
+		<link rel="modulepreload" crossorigin href="/assets/insights/frontend/assets/combine-8e631065.js">
+		<link rel="modulepreload" crossorigin href="/assets/insights/frontend/assets/chevron-down-4c0d8ea6.js">
+		<link rel="stylesheet" href="/assets/insights/frontend/assets/frappe-ui-e4b6c5e5.css">
+		<link rel="stylesheet" href="/assets/insights/frontend/assets/index-73563e65.css">
+	</head>
+	<body class="h-full">
+		<div id="app" class="h-full"></div>
+		<div id="modals"></div>
+		<div id="popovers"></div>
+		<!-- <script type="module" src="/src/main.js"></script> -->
+		
+	
+          <script>
+              {% for key in boot %}
+              window["{{ key }}"] = {{ boot[key] | tojson }};
+              {% endfor %}
+          </script>
+          </body>
+          
+</html>

@@ -177,9 +177,12 @@ node_modules
 *.kdev4
 *debug.log
 insights/docs/current
-insights/public/frontend
-insights/www/insights.html
-insights/www/insights_v2.html
+
+# Ignore public folder EXCEPT frontend (pre-built assets)
+insights/public/*
+!insights/public/frontend/
+!insights/public/js/
+!insights/public/.gitkeep
 .nyc_output
 coverage/
 
