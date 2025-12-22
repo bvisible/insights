@@ -33,6 +33,11 @@ export default defineConfig({
 		sourcemap: false,
 		rollupOptions: {
 			maxParallelFileOps: 2,
+			// Ignore Frappe bench-specific imports that don't exist in standalone builds
+			external: [
+				/common_site_config\.json/,
+				/\.\.\/\.\.\/\.\.\/frappe\//,
+			],
 			input: {
 				main: path.resolve(__dirname, 'index.html'),
 				insights_v2: path.resolve(__dirname, 'index_v2.html'),
