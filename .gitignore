@@ -178,11 +178,9 @@ node_modules
 *debug.log
 insights/docs/current
 
-# Ignore public folder EXCEPT frontend (pre-built assets)
-insights/public/*
-!insights/public/frontend/
-!insights/public/js/
-!insights/public/.gitkeep
+insights/public/frontend
+insights/www/insights.html
+insights/www/insights_v2.html
 .nyc_output
 coverage/
 
