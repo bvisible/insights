@@ -19,7 +19,7 @@ import router from '../router'
 import session from '../session'
 import type {
 	InsightsWorkbook,
-	WorkbookSharePermission as WorkbookUserPermission,
+	WorkbookSharePermission as WorkbookUserPermission
 } from '../types/workbook.types'
 
 const workbooks = new Map<string, Workbook>()
@@ -226,18 +226,20 @@ function makeWorkbook(name: string) {
 	function duplicate() {
 		confirmDialog({
 			title: 'Duplicate Workbook',
-			message: 'Duplicating this workbook will create a new workbook and copy all queries, charts and dashboards to it. Do you want to continue?',
+			message:
+				'Duplicating this workbook will create a new workbook and copy all queries, charts and dashboards to it. Do you want to continue?',
 			onSuccess: () => {
-				workbook.call('duplicate')
-				.then((name: any) => {
-					createToast({
-						message: 'Workbook duplicated successfully',
-						variant: 'success',
+				workbook
+					.call('duplicate')
+					.then((name: any) => {
+						createToast({
+							message: 'Workbook duplicated successfully',
+							variant: 'success',
+						})
+						// FIX: debug why new workbook is not loaded
+						router.push(`/workbook/${name}`)
 					})
-					// FIX: debug why new workbook is not loaded
-					router.push(`/workbook/${name}`)
-				})
-				.catch(showErrorToast)
+					.catch(showErrorToast)
 			},
 		})
 	}
@@ -279,7 +281,7 @@ function makeWorkbook(name: string) {
 	}
 
 	function copyJSON() {
-		workbook.call('export').then(data => {
+		workbook.call('export').then((data) => {
 			copyToClipboard(JSON.stringify(data, null, 2))
 		})
 	}
@@ -300,14 +302,8 @@ function makeWorkbook(name: string) {
 	async function addFolder(title: string = 'New Folder', folderType: 'query' | 'chart') {
 		const method = 'insights.api.workbooks.create_folder'
 		return call(method, { workbook: workbook.name, title, folder_type: folderType })
-			.then((folder_name: string) => {
-				workbook.load().then(() => {
-					createToast({
-						message: 'Folder created',
-						variant: 'success',
-					})
-				})
-				return folder_name
+			.then(() => {
+				workbook.load()
 			})
 			.catch(showErrorToast)
 	}
@@ -318,10 +314,6 @@ function makeWorkbook(name: string) {
 			call(method, { folder_name: folderName, move_items_to_root: true })
 				.then(() => {
 					workbook.load()
-					createToast({
-						message: 'Folder deleted',
-						variant: 'success',
-					})
 				})
 				.catch(showErrorToast)
 		}
@@ -357,7 +349,9 @@ function makeWorkbook(name: string) {
 			.catch(showErrorToast)
 	}
 
-	async function updateSortOrder(items: Array<{ type: string; name: string; sort_order: number; folder?: string | null }>) {
+	async function updateSortOrder(
+		items: Array<{ type: string; name: string; sort_order: number; folder?: string | null }>
+	) {
 		const method = 'insights.api.workbooks.update_sort_orders'
 		return call(method, { workbook: workbook.name, items }).catch(showErrorToast)
 	}
@@ -397,6 +391,10 @@ function makeWorkbook(name: string) {
 
 		copy: copyJSON,
 
+		openInDesk() {
+			window.open(`/app/insights-workbook/${workbook.name}`, '_blank')
+		},
+
 		delete: deleteWorkbook,
 	})
 }
@@ -430,11 +428,14 @@ export function getWorkbookResource(name: string) {
 	})
 
 	workbook.onAfterLoad(() => workbook.call('track_view').catch(() => {}))
-	wheneverChanges(() => workbook.doc.read_only, () => {
-		if (workbook.doc.read_only) {
-			workbook.autoSave = false
+	wheneverChanges(
+		() => workbook.doc.read_only,
+		() => {
+			if (workbook.doc.read_only) {
+				workbook.autoSave = false
+			}
 		}
-	})
+	)
 	return workbook
 }
 
