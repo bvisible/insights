@@ -56,6 +56,7 @@ const cards = computed(() => {
 
 		return {
 			measure_name,
+			label: config.value.number_columns[idx]?.label || measure_name,
 			values: numberValues,
 			currentValue: getFormattedValue(currentValue, decimal, shorten_numbers),
 			previousValue: getFormattedValue(previousValue, decimal, shorten_numbers),
@@ -98,6 +99,7 @@ function onDoubleClick(measure_name: string) {
 			<div
 				v-for="{
 					measure_name,
+					label,
 					values,
 					currentValue,
 					delta,
@@ -113,7 +115,7 @@ function onDoubleClick(measure_name: string) {
 			>
 				<div class="flex w-full flex-col">
 					<span class="truncate text-sm font-medium">
-						{{ measure_name }}
+						{{ label || measure_name }}
 					</span>
 					<div
 						class="flex-1 flex-shrink-0 truncate text-[24px] font-semibold leading-10"
