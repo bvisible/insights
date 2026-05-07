@@ -187,4 +187,4 @@ pids
 *.seed
 *.pid.lock
 todo
-CLAUDE.md
+# CLAUDE.md  # 2026-05-07 unshipped to document commit-the-build pipeline
