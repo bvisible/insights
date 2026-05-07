@@ -8,7 +8,8 @@
     "scripts": {
         "postinstall": "cd frontend && yarn install --check-files",
         "dev": "cd frontend && yarn dev",
-        "build": "cd frontend && yarn build",
+        "build": "if [ -d 'insights/public/frontend/assets' ] && [ -z \"$FORCE_REBUILD\" ]; then echo '[skip-build] pre-built artifacts present at insights/public/frontend/assets (set FORCE_REBUILD=1 to force rebuild)'; else yarn build:force; fi",
+        "build:force": "cd frontend && yarn build",
         "test": "cd frontend && yarn test"
     }
 }
