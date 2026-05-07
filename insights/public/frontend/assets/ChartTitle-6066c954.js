@@ -1,0 +1,1 @@
+import{o as e,d as r,t as a}from"./frappe-ui-8751eb88.js";const s={class:"px-4 py-2 text-lg font-medium leading-6 text-gray-800"},l={__name:"ChartTitle",props:{title:{type:String,required:!1}},setup(t){return(i,o)=>(e(),r("div",s,a(t.title),1))}};export{l as _};

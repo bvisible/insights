@@ -1,0 +1,1 @@
+import{x as t,z as s,X as a,Y as i}from"./frappe-ui-8751eb88.js";const c=t({__name:"InsertLink",props:{editor:{}},setup(o){const e=o;function n(){e.editor.commands.openLinkEditor()}return(r,p)=>s(r.$slots,"default",a(i({onClick:n})))}});export{c as default};

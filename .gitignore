@@ -173,9 +173,11 @@ node_modules
 *debug.log
 insights/docs/current
 
-insights/public/frontend
-insights/www/insights.html
-insights/www/insights_v2.html
+# 2026-05-07 (NORA #28) — frontend build outputs are committed on this branch.
+# See docs/COMMIT-BUILD-PATTERN.md in neoffice-devops.
+# insights/public/frontend
+# insights/www/insights.html
+# insights/www/insights_v2.html
 .nyc_output
 coverage/
 
