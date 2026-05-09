@@ -42,7 +42,7 @@ const emit = defineEmits<{
 					<template #prefix>
 						<RefreshCw class="h-3.5 w-3.5 text-gray-500" />
 					</template>
-					<span class="text-gray-500">Load Preview</span>
+					<span class="text-gray-500">{{ __("Load Preview") }}</span>
 				</Button>
 			</div>
 		</router-link>

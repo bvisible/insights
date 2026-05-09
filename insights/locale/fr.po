@@ -3563,3 +3563,85 @@ msgstr "commence par"
 #: frontend/src2/query/components/ColumnsSelectorDialog.vue:120
 msgid "{0} columns selected"
 msgstr "{0} colonnes sélectionnées"
+
+msgid "All Dashboards"
+msgstr "Tous les tableaux de bord"
+
+msgid "Load Preview"
+msgstr "Charger l'aperçu"
+
+msgid "Enable"
+msgstr "Activer"
+
+msgid ""
+"Enable permissions to restrict access to data sources & tables based on "
+"teams and users."
+msgstr ""
+"Activer les permissions pour restreindre l'accès aux sources de données et "
+"tables en fonction des équipes et utilisateurs."
+
+msgid ""
+"Apply restrictions based on roles and user permissions defined on this site."
+" Only applicable for site data source."
+msgstr ""
+"Appliquer les restrictions basées sur les rôles et permissions utilisateur "
+"définis sur ce site. Applicable uniquement pour la source de données du "
+"site."
+
+msgid "Create teams to group users and manage permissions."
+msgstr ""
+"Créer des équipes pour regrouper les utilisateurs et gérer les permissions."
+
+msgid ""
+"Enable the data store to store database tables into a duckdb database for "
+"faster & cross-database queries."
+msgstr ""
+"Activer l'entrepôt de données pour stocker les tables dans une base DuckDB "
+"pour des requêtes plus rapides et inter-bases."
+
+msgid ""
+"Set the maximum number of rows per table that will be imported into the data"
+" store. Default is 10,00,000"
+msgstr ""
+"Définir le nombre maximum de lignes par table importées dans l'entrepôt. Par"
+" défaut : 1 000 000"
+
+msgid "Memory Limit"
+msgstr "Limite mémoire"
+
+msgid ""
+"Set the maximum memory usage while importing tables into the data store. "
+"Default is 512MB"
+msgstr ""
+"Définir l'utilisation mémoire maximale lors de l'import des tables. Par "
+"défaut : 512 Mo"
+
+msgid "Update"
+msgstr "Mettre à jour"
+
+msgid "Logo"
+msgstr "Logo"
+
+msgid ""
+"Appears in the top left corner of the application and in the browser tab "
+"next to the page title. Recommended size: 32x32px in PNG format."
+msgstr ""
+"Apparaît en haut à gauche de l'application et dans l'onglet du navigateur à "
+"côté du titre. Taille recommandée : 32x32px au format PNG."
+
+msgid ""
+"Set the start of the fiscal year for the organization. This will be used to "
+"calculate quarterly and yearly data."
+msgstr ""
+"Définir le début de l'exercice fiscal pour l'organisation. Ceci sera utilisé"
+" pour calculer les données trimestrielles et annuelles."
+
+msgid "Select Date"
+msgstr "Sélectionner une date"
+
+msgid ""
+"Set the start of the week for the organization. This will be used to "
+"calculate weekly data."
+msgstr ""
+"Définir le début de la semaine pour l'organisation. Ceci sera utilisé pour "
+"calculer les données hebdomadaires."
