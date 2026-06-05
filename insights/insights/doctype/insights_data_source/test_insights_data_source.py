@@ -1,13 +1,15 @@
 # Copyright (c) 2022, Frappe Technologies Pvt. Ltd. and Contributors
 # See license.txt
 
-import unittest
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from ibis import _
 
-from .insights_data_source import InsightsDataSource, build_ibis_query
+# //// Neoffice — cherry-pick of upstream 3baf7f84: `build_ibis_query` has not
+# //// existed since the v3 refactor, and the dead import aborted the whole test
+# //// run at collection time. Drop this marker when #138 merges past 3baf7f84.
+from .insights_data_source import InsightsDataSource
 
 
 class TestInsightsDataSource(FrappeTestCase):
