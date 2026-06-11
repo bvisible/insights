@@ -1,7 +1,7 @@
 <template>
 	<div class="flex h-screen w-screen overflow-hidden bg-white text-base antialiased">
-		<div v-if="!hideSidebar" class="h-full border-r bg-gray-50">
-			<AppSidebar />
+		<div v-if="!hideSidebar" class="h-full">
+			<NeoCockpitInsightsSidebar />
 		</div>
 
 		<div class="flex h-full flex-1 flex-col overflow-auto">
@@ -27,7 +27,7 @@
 import { computed, ref, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
 import { Toaster } from 'vue-sonner'
-import AppSidebar from './components/AppSidebar.vue'
+import NeoCockpitInsightsSidebar from './components/NeoCockpitInsightsSidebar.vue'
 import { dialogs } from './helpers/confirm_dialog'
 import { attachRealtimeListener, waitUntil } from './helpers/index.ts'
 import { createToast } from './helpers/toasts.ts'
