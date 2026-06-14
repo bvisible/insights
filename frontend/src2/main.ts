@@ -9,6 +9,34 @@ import router from './router.ts'
 import { translationPlugin } from './translation.ts'
 import { spritePlugin } from 'frappe-ui/icons'
 
+// Adopt the shared cockpit colour mode (neocockpit-colormode) on startup so the
+// Insights SPA + its charts follow the product theme even when the NeoCockpit
+// chrome doesn't propagate data-theme to this document. //// neoffice
+;(function applyNeoColorMode() {
+	const apply = () => {
+		let mode = 'system'
+		try {
+			mode = localStorage.getItem('neocockpit-colormode') || 'system'
+		} catch (e) {
+			/* noop */
+		}
+		const sysDark =
+			typeof matchMedia !== 'undefined' && matchMedia('(prefers-color-scheme: dark)').matches
+		const theme = mode === 'system' ? (sysDark ? 'dark' : 'light') : mode
+		document.documentElement.setAttribute('data-theme', theme)
+		document.documentElement.classList.toggle('dark', theme === 'dark')
+	}
+	apply()
+	try {
+		matchMedia('(prefers-color-scheme: dark)').addEventListener('change', apply)
+	} catch (e) {
+		/* noop */
+	}
+	window.addEventListener('storage', (e) => {
+		if (e.key === 'neocockpit-colormode') apply()
+	})
+})()
+
 setConfig('resourceFetcher', frappeRequest)
 
 const app = createApp(App)
