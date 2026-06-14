@@ -515,7 +515,7 @@ export function getFunnelChartOptions(config: FunnelChartConfig, result: QueryRe
 	const labels = rows.map((r) => r[labelColumn])
 	const values = rows.map((r) => r[valueColumn])
 
-	let colors = getGradientColors('blue')
+	let colors = getGradientColors('clay')
 
 	return {
 		animation: true,
@@ -785,7 +785,8 @@ export function getMapChartOptions(config: MapChartConfig, result: QueryResult) 
 			pieces: mapPieces(values),
 			itemSymbol: 'circle',
 			inRange: {
-				color: ['#dbeeff','#b7ddff', '#92cdff','#6ebcff','#4aabff']
+				// clay intensity scale (was a blue ramp) — DS choropleth
+				color: ['#faefe6', '#e9c5a4', '#dda479', '#c2723f', '#a15a2e']
 			},
 		},
 		series: [{

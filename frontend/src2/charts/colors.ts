@@ -1,6 +1,9 @@
 
 export const COLOR_MAP = {
-	blue: '#318AD8',
+	// Neoffice Design System: clay leads the categorical palette so single-series
+	// charts default to the brand accent instead of blue. The rest stays diverse
+	// on purpose — multi-series charts need distinct hues.
+	clay: '#D68A59',
 	pink: '#F683AE',
 	green: '#48BB74',
 	red: '#F56B6B',
@@ -25,7 +28,8 @@ export const COLOR_MAP = {
 
 // https://10015.io/tools/color-shades-generator
 export const GRADIENT_COLORS = {
-	blue: ['#2d87d6', '#4393da', '#589fdf', '#6dace3', '#83b8e7', '#98c4eb', '#c3dcf3', '#d8e9f7', '#edf5fc', '#ffffff'],
+	// clay ramp (was a blue ramp) — single-colour gradients follow the DS accent
+	clay: ['#c2723f', '#cd8254', '#d6926a', '#dea27f', '#e5b194', '#ebc1aa', '#f1d1c0', '#f6e0d6', '#fbefe9', '#ffffff'],
 }
 
 export const getColors = () => {
