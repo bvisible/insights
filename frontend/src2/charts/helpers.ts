@@ -305,10 +305,32 @@ function getSerie(config: AxisChartConfig, number_column: string): Series {
 	)
 }
 
+// Dark-mode chart theming: ECharts renders to canvas and does not inherit the
+// app theme, so axes/grid/legend/tooltip stay dark-on-dark in dark mode. Read
+// the document theme at build time and feed ECharts the matching colours.
+function isDarkMode(): boolean {
+	if (typeof document === 'undefined') return false
+	const el = document.documentElement
+	return el.classList.contains('dark') || el.getAttribute('data-theme') === 'dark'
+}
+function chartTheme() {
+	const dark = isDarkMode()
+	return {
+		axisLabel: dark ? '#94a3b8' : '#6b7280',
+		axisLine: dark ? 'rgba(255, 255, 255, 0.20)' : 'rgba(0, 0, 0, 0.15)',
+		splitLine: dark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+		legendText: dark ? '#cbd5e1' : '#475569',
+		tooltipBg: dark ? '#1f2430' : '#ffffff',
+		tooltipBorder: dark ? '#374151' : '#e5e7eb',
+		tooltipText: dark ? '#e5e7eb' : '#1f2937',
+	}
+}
+
 function getXAxis(x_axis: XAxis) {
 	const columnType = x_axis.dimension.data_type
 	const xAxisIsDate = columnType && FIELDTYPES.DATE.includes(columnType)
 	const rotation = Math.min(Math.max(x_axis.label_rotation || 0, 0), 90)
+	const theme = chartTheme()
 
 	return {
 		type: xAxisIsDate ? 'time' : 'category',
@@ -316,15 +338,16 @@ function getXAxis(x_axis: XAxis) {
 		scale: true,
 		alignTicks: true,
 		boundaryGap: ['1%', '1%'],
-		splitLine: { show: false },
-		axisLine: { show: true, onZero: true },
-		axisTick: { show: true },
+		splitLine: { show: false, lineStyle: { color: theme.splitLine } },
+		axisLine: { show: true, onZero: true, lineStyle: { color: theme.axisLine } },
+		axisTick: { show: true, lineStyle: { color: theme.axisLine } },
 		axisLabel: {
 			show: true,
 			rotate: rotation,
 			width: 100,
 			overflow: 'truncate',
 			ellipsis: '...',
+			color: theme.axisLabel,
 		},
 	}
 }
@@ -336,6 +359,7 @@ type YAxisCustomizeOptions = {
 	max?: number
 }
 function getYAxis(options: YAxisCustomizeOptions = {}) {
+	const theme = chartTheme()
 	return {
 		show: true,
 		type: 'value',
@@ -343,13 +367,14 @@ function getYAxis(options: YAxisCustomizeOptions = {}) {
 		scale: false,
 		alignTicks: true,
 		boundaryGap: ['0%', '1%'],
-		splitLine: { show: true },
-		axisTick: { show: true },
-		axisLine: { show: true, onZero: true },
+		splitLine: { show: true, lineStyle: { color: theme.splitLine } },
+		axisTick: { show: true, lineStyle: { color: theme.axisLine } },
+		axisLine: { show: true, onZero: true, lineStyle: { color: theme.axisLine } },
 		axisLabel: {
 			show: true,
 			hideOverlap: true,
 			margin: 8,
+			color: theme.axisLabel,
 			formatter: (value: number) => getShortNumber(value, 1),
 		},
 		min: options.normalized ? 0 : options.min || undefined,
@@ -541,7 +566,7 @@ export function getFunnelChartOptions(config: FunnelChartConfig, result: QueryRe
 					// because the label layout function is not changing when the label position changes
 					// and so the chart doesn't re-render
 					position: labelPosition,
-					color: '#565656',
+					color: chartTheme().axisLabel,
 					lineHeight: 16,
 					padding: [0, 5, 0, 0],
 					formatter: (params: any) => {
@@ -1013,10 +1038,14 @@ function getGrid(options: any = {}) {
 }
 
 function getTooltip(options: any = {}) {
+	const theme = chartTheme()
 	return {
 		trigger: 'axis',
 		confine: true,
 		appendToBody: false,
+		backgroundColor: theme.tooltipBg,
+		borderColor: theme.tooltipBorder,
+		textStyle: { color: theme.tooltipText },
 		formatter: (params: Object | Array<Object>) => {
 			if (Array.isArray(params)) {
 				params = params
@@ -1068,6 +1097,7 @@ function getLegend(show_legend = true, show_scrollbar = false, swap_axes = false
 	if (show_scrollbar && !swap_axes) {
 		bottom = 32;
 	}
+	const theme = chartTheme()
 
 	return {
 		show: show_legend,
@@ -1077,7 +1107,7 @@ function getLegend(show_legend = true, show_scrollbar = false, swap_axes = false
 		bottom,
 		itemGap: 16,
 		padding: [10, 30],
-		textStyle: { padding: [0, 0, 0, -4] },
+		textStyle: { padding: [0, 0, 0, -4], color: theme.legendText },
 		pageIconSize: 10,
 		pageIconColor: '#64748B',
 		pageIconInactiveColor: '#C0CCDA',
