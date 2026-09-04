@@ -109,13 +109,14 @@
   },
   {
    "fieldname": "connection_string",
-   "fieldtype": "Small Text",
-   "label": "Connection String"
+   "fieldtype": "Password",
+   "label": "Connection String",
+   "permlevel": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2023-05-29 14:25:59.190544",
+ "modified": "2026-09-04 20:45:00.000000",
  "modified_by": "Administrator",
  "module": "Insights",
  "name": "Insights Data Source",
@@ -144,6 +145,12 @@
    "report": 1,
    "role": "Insights User",
    "share": 1,
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "System Manager",
    "write": 1
   }
  ],

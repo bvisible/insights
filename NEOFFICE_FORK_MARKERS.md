@@ -66,9 +66,18 @@ commits, except the two removal-only hunks of `frontend/components.d.ts`
 | `insights/www/insights.html`, `insights/www/insights_v2.html` | **generated** by `yarn copy-html-entry[2]` from the vite output. They *do* carry a marker, and that is deliberate: vite copies HTML comments verbatim, so the marker now lives in the sources `frontend/index.html` / `frontend/index_v2.html` and is re-emitted into these two files at every build. Do not hand-edit. | rebuild; the marker comes back on its own |
 | `frontend/components.d.ts` | **generated** by `unplugin-vue-components`. Our only divergence is two stale entries (`Autocomplete`, `Popover`) that our regeneration dropped because upstream had already deleted the `.vue` files. Not an intention. | take upstream's file; the plugin rewrites it anyway |
 | `.github/workflows/*.yml` (4 added) | ours entirely, no upstream equivalent: `build-frontend.yml` (commit-the-build bot), `tests.yml` + `upstream-preview.yml` (fleet CI, tracker #138), `fork-markers.yml` (this discipline). The marker tool skips `.github/` by design. | keep ours, take upstream's workflows alongside |
+| `insights/insights/doctype/insights_data_source_v3/insights_data_source_v3.json` | JSON, no comment syntax. Security pass of 2026-09-04 (tracker #231): `connection_string` (was `Text`) and `bigquery_service_account_key` (was `JSON`) became **`Password` at `permlevel: 1`**, and a permission row `{permlevel 1, read, write, Insights Admin}` was appended. Both fields held a database DSN and a service-account private key **in clear**, readable by any `Insights User` through `frappe.client.get_list`. `modified` bumped to 2026-09-04 so instances re-import the doctype. | **upstream/develop already carries the identical `permlevel: 1` and the identical permission row** — take theirs, then re-apply the two `fieldtype: Password` values on top (upstream still stores the values in clear). |
+| `insights/insights/doctype/insights_data_source/insights_data_source.json` | JSON, no comment syntax. Same pass: v2's `connection_string` (was `Small Text`) became **`Password` at `permlevel: 1`** with a `{permlevel 1, read, write, System Manager}` row — v2 grants read AND write on this doctype to every `Insights User`, so the DSN travelled with the record. `modified` bumped. | keep ours; upstream has not touched this legacy doctype |
 
-No DocType JSON diverges (`git diff --name-only BASE HEAD -- '*.json'` returns
-only the two `package.json`), so **nothing here needs to become a Custom Field**.
+**Two DocType JSON now diverge** (2026-09-04, security pass — see the two rows
+above). They do not need to become Custom Fields: both changes are a fieldtype and
+a permlevel on fields that already exist, and one of the two is a change upstream
+has itself made since. The migration that goes with them —
+`insights.insights.doctype.insights_data_source_v3.patches.encrypt_data_source_secrets`
+— moves the values already stored in clear into `__Auth` and repairs the permission
+level on instances whose permissions are customised (a DocType carrying any
+`Custom DocPerm` row ignores its shipped `DocPerm` rows entirely, so the permlevel
+row would never have reached them). Nothing else here needs to become a Custom Field.
 
 ### Hunks a comment cannot reach
 
@@ -140,12 +149,33 @@ sides** — that is the whole conflict surface:
 | `CLAUDE.md` | 1 | upstream added its own; keep both contents |
 | the rest | 1–4 | routine |
 
-**No DocType JSON diverges**, so nothing here has to be re-expressed as a Custom
-Field at the merge.
+**Two DocType JSON diverge** since the 2026-09-04 security pass (see above);
+neither has to be re-expressed as a Custom Field at the merge.
 
 Files that exist only on our side (no conflict possible, but they must be
 carried forward): the 4 `.github/workflows/*.yml`, the 2 `NeoCockpit*.vue`, the
 2 `insights/www/*.html` artifacts, and `insights/public/frontend/**`.
+
+### The 2026-09-04 security pass, and what upstream already fixed
+
+Six defects were fixed on this fork on 2026-09-04 (tracker #231). Measured the
+same day against `upstream/develop` (1041 commits ahead of our BASE), **three of
+them are already fixed upstream, differently** — those markers say so and must be
+resolved by *taking upstream's version*, not by keeping ours:
+
+| ours | upstream/develop | at the merge |
+|---|---|---|
+| `insights/api/__init__.py` — `_load_doc_for_method()` anchors the document on the stored row | `check_stored_document()` — checks the permission on the stored row before building the payload document | **take upstream's**; ours only predates it. Upstream still does not call `check_if_latest()`, which ours does — keep that half if it still matters |
+| `insights/api/data_sources.py` — the three table endpoints call `InsightsTablev3.get_ibis_table()` | `get_permitted_ibis_table()`, same intent | **take upstream's** |
+| `insights_query_v3.export()` — `frappe.has_permission()` per linked query | `check_referenced_query_access()`, plus a guard for a dependency that no longer exists | **take upstream's** |
+| `insights/permissions.py` — `docs is None` guard in `has_doc_permission()` | **not fixed** (identical code) | keep ours, and it is in the upstream PR |
+| `ibis_utils.get_sql_tables_to_restrict()` — CTE shadowing | **not fixed**: `query_utils.extract_sql_table_refs()` still drops every table whose name matches a CTE alias | keep ours, re-express on top of upstream's `_get_sql_table_bindings()`; it is in the upstream PR |
+| `connectors/postgresql.py` — quote the DSN credentials only | **not fixed** (`quote_plus` over the whole DSN) | keep ours; it is in the upstream PR |
+| the two DocType JSON — `Password` fieldtype + migration | **permlevel only**, values still in clear | keep the fieldtype half; it is in the upstream PR |
+
+The upstream PR is prepared on `bvisible/insights`, branch
+`upstream/security-hardening-2026-09`, cut from `upstream/develop` and carrying no
+`////` marker. Every marker of this pass names it as its removal condition.
 
 ### One defect that changes the merge
 
