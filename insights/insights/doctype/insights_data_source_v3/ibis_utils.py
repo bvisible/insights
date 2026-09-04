@@ -23,6 +23,11 @@ from insights import create_toast
 from insights.cache_utils import make_digest
 from insights.insights.doctype.insights_table_v3.insights_table_v3 import (
     InsightsTablev3,
+    #//// Neoffice — added import, used by is_insights_table() at the bottom of this
+    #//// module (the CTE-shadowing guard of get_sql_tables_to_restrict).
+    #//// (drop once upstream PR the upstream PR from bvisible/insights branch
+#//// upstream/security-hardening-2026-09 is merged into frappe/insights)
+    get_table_name,
 )
 from insights.insights.query_builders.sql_functions import handle_timespan
 from insights.utils import create_execution_log
@@ -509,29 +514,20 @@ class IbisQueryBuilder:
         if check_permissions:
             parsed = sg.parse_one(raw_sql, dialect=db.dialect)
 
-            tables = set()
-            for table_exp in parsed.find_all(sg.exp.Table):
-                tables.add(table_exp.name)
-
-            cte_aliases = set()
-            for cte_exp in parsed.find_all(sg.exp.CTE):
-                cte_aliases.add(cte_exp.alias)
-
-            tables = tables - cte_aliases
-
-            replace_map = {}
-            for table_name in tables:
-                t = InsightsTablev3.get_ibis_table(
-                    data_source,
-                    table_name,
-                    use_live_connection=True,
-                )
-                t_sql = ibis.to_sql(t)
-                # check if t_sql has any where clause, if not, then don't replace
-                t_parsed = sg.parse_one(t_sql, dialect=db.dialect)
-                if not t_parsed.find(sg.exp.Where):
-                    continue
-                replace_map[table_name] = t_sql
+            #//// Neoffice — security fix, upstream defect (frappe/insights): this
+            #//// block used to collect the referenced tables, subtract the CTE
+            #//// aliases, and only then check permissions and build the restriction
+            #//// map. The caller writes both sides of that subtraction: naming a CTE
+            #//// after a real table ("WITH tabUser AS (SELECT * FROM tabUser) SELECT
+            #//// * FROM tabUser") emptied the set, so check_table_permission() was
+            #//// never reached and no restriction was ever prepended — the raw SQL
+            #//// went to the backend untouched. The logic now lives in
+            #//// get_sql_tables_to_restrict() at the bottom of this module, where the
+            #//// permission check runs on the tables the statement really references
+            #//// and a CTE shadowing a restricted table is refused.
+            #//// (drop once upstream PR the upstream PR from bvisible/insights branch
+#//// upstream/security-hardening-2026-09 is merged into frappe/insights)
+            replace_map = get_sql_tables_to_restrict(data_source, parsed, db.dialect)
 
             with_clauses = []
             for table_name, table_sql in replace_map.items():
@@ -918,3 +914,74 @@ def ensure_rollback():
         yield
     finally:
         frappe.db.rollback(save_point=f"save_point_{hash}")
+
+
+#//// Neoffice — added, security fix, upstream defect (frappe/insights). Extracted
+#//// from apply_sql() so the guard can be tested on its own, and hardened on the way:
+#////   1. permissions are checked on the tables the statement really references,
+#////      BEFORE the CTE aliases are subtracted (upstream checked what was left of
+#////      the subtraction, which the caller controls);
+#////   2. a CTE named after a table that carries a restriction is refused — from
+#////      here on nothing can tell which of the two the engine will resolve, and the
+#////      author can always rename the CTE. Only a shadow that actually hides a
+#////      restriction is refused, so an unrestricted name stays usable as an alias.
+#//// is_insights_table() says whether a name is a table Insights knows about, i.e.
+#//// one that check_table_permission() and the table restrictions apply to.
+#//// get_restricted_table_sql() returns the SQL carrying those restrictions, or None
+#//// when there are none to enforce — the test upstream already performed inline
+#//// ("does the rewritten table have a WHERE clause"), factored out so the rewriting
+#//// and the shadow check answer the very same question.
+#//// (drop once upstream PR the upstream PR from bvisible/insights branch
+#//// upstream/security-hardening-2026-09 is merged into frappe/insights)
+def is_insights_table(data_source: str, table_name: str) -> bool:
+    return bool(frappe.db.exists("Insights Table v3", get_table_name(data_source, table_name)))
+
+
+def get_restricted_table_sql(data_source: str, table_name: str, dialect) -> str | None:
+    t = InsightsTablev3.get_ibis_table(data_source, table_name, use_live_connection=True)
+    t_sql = ibis.to_sql(t)
+    t_parsed = sg.parse_one(t_sql, dialect=dialect)
+    if not t_parsed.find(sg.exp.Where):
+        return None
+    return t_sql
+
+
+def get_sql_tables_to_restrict(data_source: str, parsed, dialect) -> dict[str, str]:
+    """Tables of a raw SQL statement whose restrictions must be prepended as CTEs.
+
+    Raises if the caller may not read one of the tables the statement references,
+    or if a CTE is named after a table that carries a restriction.
+    """
+    # local import: insights_team imports this module at load time
+    from insights.insights.doctype.insights_team.insights_team import check_table_permission
+
+    tables = {table_exp.name for table_exp in parsed.find_all(sg.exp.Table)}
+    cte_aliases = {cte_exp.alias for cte_exp in parsed.find_all(sg.exp.CTE)}
+
+    referenced = {name for name in tables if is_insights_table(data_source, name)}
+    for table_name in referenced:
+        check_table_permission(data_source, table_name)
+
+    replace_map = {}
+    for table_name in tables - cte_aliases:
+        table_sql = get_restricted_table_sql(data_source, table_name, dialect)
+        # a table with no restriction to apply does not need to be replaced
+        if table_sql is None:
+            continue
+        replace_map[table_name] = table_sql
+
+    shadowed = sorted(
+        alias
+        for alias in cte_aliases & referenced
+        if get_restricted_table_sql(data_source, alias, dialect) is not None
+    )
+    if shadowed:
+        frappe.throw(
+            frappe._(
+                "A common table expression cannot be named after a restricted table: {0}."
+                " Please rename it."
+            ).format(", ".join(shadowed)),
+            frappe.PermissionError,
+        )
+
+    return replace_map
