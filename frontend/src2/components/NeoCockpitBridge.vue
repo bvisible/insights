@@ -1,3 +1,10 @@
+<!-- //// Neoffice — added file (no upstream equivalent): mounts the shared
+     //// Neoffice chrome (the NeoCockpit React IIFE bundle served by frappe at
+     //// /assets/frappe/js/lib/neocockpit.global.js) in place of the native
+     //// frappe-ui sidebar, without adding React to this Vue app. Generic
+     //// recipe reused by every standalone Vue surface (Drive, LMS, Helpdesk,
+     //// CRM): only `contextNav` and `surfaceApp` change. Nothing upstream
+     //// calls it, so it never conflicts — it only has to keep compiling. -->
 <template>
   <div
     ref="host"

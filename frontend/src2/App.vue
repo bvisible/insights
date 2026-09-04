@@ -1,5 +1,12 @@
 <template>
 	<div class="flex h-screen w-screen overflow-hidden bg-white text-base antialiased">
+		<!-- //// Neoffice — upstream renders its own <AppSidebar> here (in a wrapper
+		     //// carrying border-r bg-gray-50). We mount NeoCockpitInsightsSidebar
+		     //// instead: the shared Neoffice chrome (module switcher, NORA, mail,
+		     //// notifications) must be the same on every surface — ADR-015. The
+		     //// wrapper classes go too, the cockpit paints its own frame. The native
+		     //// AppSidebar is not lost: the sidebar falls back to it when the
+		     //// cockpit bundle cannot load. -->
 		<div v-if="!hideSidebar" class="h-full">
 			<NeoCockpitInsightsSidebar />
 		</div>
@@ -27,6 +34,9 @@
 import { computed, ref, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
 import { Toaster } from 'vue-sonner'
+//// Neoffice — replaces `import AppSidebar from './components/AppSidebar.vue'`
+//// (see the template above). AppSidebar.vue itself is untouched and still
+//// imported by NeoCockpitInsightsSidebar as the fallback.
 import NeoCockpitInsightsSidebar from './components/NeoCockpitInsightsSidebar.vue'
 import { dialogs } from './helpers/confirm_dialog'
 import { attachRealtimeListener, waitUntil } from './helpers/index.ts'

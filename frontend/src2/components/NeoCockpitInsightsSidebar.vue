@@ -1,3 +1,9 @@
+<!-- //// Neoffice — added file (no upstream equivalent): the Insights flavour
+     //// of the shared chrome. Maps the app's four fixed destinations
+     //// (Dashboards, Workbooks, Data Sources, Data Store) into the cockpit's
+     //// contextNav, and keeps upstream's AppSidebar as the automatic fallback
+     //// when the cockpit bundle fails to load. Referenced only from App.vue,
+     //// which is where the upstream conflict will land. -->
 <template>
 	<AppSidebar v-if="failed" />
 	<NeoCockpitBridge
