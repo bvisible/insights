@@ -305,6 +305,11 @@ function getSerie(config: AxisChartConfig, number_column: string): Series {
 	)
 }
 
+//// Neoffice — added block. ECharts draws into a canvas and inherits nothing
+//// from the page theme, so upstream's hardcoded axis / legend / tooltip
+//// colours stayed dark-on-dark once the SPA followed the cockpit's dark mode.
+//// chartTheme() reads the data-theme set by main.ts and hands ECharts the
+//// matching palette. Every `theme` read below comes from this one source.
 // Dark-mode chart theming: ECharts renders to canvas and does not inherit the
 // app theme, so axes/grid/legend/tooltip stay dark-on-dark in dark mode. Read
 // the document theme at build time and feed ECharts the matching colours.
@@ -330,6 +335,7 @@ function getXAxis(x_axis: XAxis) {
 	const columnType = x_axis.dimension.data_type
 	const xAxisIsDate = columnType && FIELDTYPES.DATE.includes(columnType)
 	const rotation = Math.min(Math.max(x_axis.label_rotation || 0, 0), 90)
+	//// Neoffice — added: the dark-mode palette for this axis (chartTheme above).
 	const theme = chartTheme()
 
 	return {
@@ -338,6 +344,8 @@ function getXAxis(x_axis: XAxis) {
 		scale: true,
 		alignTicks: true,
 		boundaryGap: ['1%', '1%'],
+		//// Neoffice — lineStyle colours added to upstream's bare { show } objects, so
+		//// the axis line, the ticks and the split lines stay visible on a dark canvas.
 		splitLine: { show: false, lineStyle: { color: theme.splitLine } },
 		axisLine: { show: true, onZero: true, lineStyle: { color: theme.axisLine } },
 		axisTick: { show: true, lineStyle: { color: theme.axisLine } },
@@ -347,6 +355,8 @@ function getXAxis(x_axis: XAxis) {
 			width: 100,
 			overflow: 'truncate',
 			ellipsis: '...',
+			//// Neoffice — added: upstream leaves ECharts' default near-black label colour,
+			//// unreadable on a dark canvas.
 			color: theme.axisLabel,
 		},
 	}
@@ -359,6 +369,7 @@ type YAxisCustomizeOptions = {
 	max?: number
 }
 function getYAxis(options: YAxisCustomizeOptions = {}) {
+	//// Neoffice — added: the dark-mode palette for this axis (chartTheme above).
 	const theme = chartTheme()
 	return {
 		show: true,
@@ -367,6 +378,8 @@ function getYAxis(options: YAxisCustomizeOptions = {}) {
 		scale: false,
 		alignTicks: true,
 		boundaryGap: ['0%', '1%'],
+		//// Neoffice — lineStyle colours added to upstream's bare { show } objects, so
+		//// the axis line, the ticks and the split lines stay visible on a dark canvas.
 		splitLine: { show: true, lineStyle: { color: theme.splitLine } },
 		axisTick: { show: true, lineStyle: { color: theme.axisLine } },
 		axisLine: { show: true, onZero: true, lineStyle: { color: theme.axisLine } },
@@ -374,6 +387,8 @@ function getYAxis(options: YAxisCustomizeOptions = {}) {
 			show: true,
 			hideOverlap: true,
 			margin: 8,
+			//// Neoffice — added: upstream leaves ECharts' default near-black label colour,
+			//// unreadable on a dark canvas.
 			color: theme.axisLabel,
 			formatter: (value: number) => getShortNumber(value, 1),
 		},
@@ -540,6 +555,8 @@ export function getFunnelChartOptions(config: FunnelChartConfig, result: QueryRe
 	const labels = rows.map((r) => r[labelColumn])
 	const values = rows.map((r) => r[valueColumn])
 
+	//// Neoffice — 'blue' became 'clay' in GRADIENT_COLORS (Design System): the
+	//// funnel gradient follows the brand accent. Both sides renamed together.
 	let colors = getGradientColors('clay')
 
 	return {
@@ -566,6 +583,7 @@ export function getFunnelChartOptions(config: FunnelChartConfig, result: QueryRe
 					// because the label layout function is not changing when the label position changes
 					// and so the chart doesn't re-render
 					position: labelPosition,
+					//// Neoffice — was the hardcoded '#565656', invisible on a dark canvas.
 					color: chartTheme().axisLabel,
 					lineHeight: 16,
 					padding: [0, 5, 0, 0],
@@ -810,6 +828,8 @@ export function getMapChartOptions(config: MapChartConfig, result: QueryResult) 
 			pieces: mapPieces(values),
 			itemSymbol: 'circle',
 			inRange: {
+				//// Neoffice — the choropleth ramp was a five-step blue scale; replaced by the
+				//// clay scale of the Design System. The pieces and thresholds are untouched.
 				// clay intensity scale (was a blue ramp) — DS choropleth
 				color: ['#faefe6', '#e9c5a4', '#dda479', '#c2723f', '#a15a2e']
 			},
@@ -1038,11 +1058,14 @@ function getGrid(options: any = {}) {
 }
 
 function getTooltip(options: any = {}) {
+	//// Neoffice — added: the dark-mode palette for the tooltip (chartTheme above).
 	const theme = chartTheme()
 	return {
 		trigger: 'axis',
 		confine: true,
 		appendToBody: false,
+		//// Neoffice — added: upstream keeps ECharts' white tooltip, which stays white
+		//// on a dark page. Background, border and text now follow the theme.
 		backgroundColor: theme.tooltipBg,
 		borderColor: theme.tooltipBorder,
 		textStyle: { color: theme.tooltipText },
@@ -1097,6 +1120,7 @@ function getLegend(show_legend = true, show_scrollbar = false, swap_axes = false
 	if (show_scrollbar && !swap_axes) {
 		bottom = 32;
 	}
+	//// Neoffice — added: the dark-mode palette for the legend (chartTheme above).
 	const theme = chartTheme()
 
 	return {
@@ -1107,6 +1131,8 @@ function getLegend(show_legend = true, show_scrollbar = false, swap_axes = false
 		bottom,
 		itemGap: 16,
 		padding: [10, 30],
+		//// Neoffice — colour added to upstream's padding-only textStyle: the legend
+		//// labels were near-black on the dark canvas.
 		textStyle: { padding: [0, 0, 0, -4], color: theme.legendText },
 		pageIconSize: 10,
 		pageIconColor: '#64748B',

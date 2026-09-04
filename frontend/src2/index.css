@@ -64,6 +64,12 @@ body {
 	stroke-width: 1.5;
 }
 
+/* //// Neoffice — added block. src2 paints its surfaces with hardcoded light
+   //// Tailwind utilities (bg-white, text-gray-700, border-gray-200...), so the
+   //// SPA stayed white when the cockpit switched to dark mode. Remapping those
+   //// utilities under [data-theme='dark'] is what keeps the diff off every
+   //// template. The charts read the same data-theme, see chartTheme() in
+   //// charts/helpers.ts. */
 /* ============================================================================
  * Neoffice — dark mode for the Insights SPA, driven by the cockpit colour mode.
  * The NeoCockpit sets data-theme="dark" on <html>; src2 uses hardcoded light

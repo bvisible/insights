@@ -129,6 +129,12 @@
 	opacity: 0;
 }
 
+/* //// Neoffice — added block. frappe-ui exposes its accent through semantic
+   //// --outline-blue / --surface-blue / --text-ink-blue tokens; we re-point
+   //// them at clay #D68A59 (Neoffice Design System) so links, focus rings and
+   //// accent surfaces are warm instead of frappe blue, in light and in dark.
+   //// Upstream's own declarations above are untouched: only the tokens are
+   //// overridden, so a frappe-ui upgrade keeps working. */
 /* === Neoffice Design System — recolor the frappe-ui blue accent to clay
    #D68A59. Override the semantic --*-blue-* tokens so links/active/focus/
    accent surfaces become warm clay instead of frappe blue (light + dark).

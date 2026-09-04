@@ -1,5 +1,11 @@
 
 export const COLOR_MAP = {
+	//// Neoffice — the `blue` key of COLOR_MAP is renamed to `clay` (#D68A59) and
+	//// kept first, so a single-series chart defaults to the brand accent instead
+	//// of frappe blue (Design System). Only this first entry changes; the rest of
+	//// the palette stays deliberately diverse — multi-series charts need distinct
+	//// hues. Charts persist the resolved hex, never the key, so saved charts keep
+	//// the colour they were saved with.
 	// Neoffice Design System: clay leads the categorical palette so single-series
 	// charts default to the brand accent instead of blue. The rest stays diverse
 	// on purpose — multi-series charts need distinct hues.
@@ -28,6 +34,9 @@ export const COLOR_MAP = {
 
 // https://10015.io/tools/color-shades-generator
 export const GRADIENT_COLORS = {
+	//// Neoffice — the single GRADIENT_COLORS ramp goes from blue to clay, and its
+	//// key with it (`blue` -> `clay`). Its only caller is getFunnelChartOptions in
+	//// charts/helpers.ts: rename both sides together or the funnel gets undefined.
 	// clay ramp (was a blue ramp) — single-colour gradients follow the DS accent
 	clay: ['#c2723f', '#cd8254', '#d6926a', '#dea27f', '#e5b194', '#ebc1aa', '#f1d1c0', '#f6e0d6', '#fbefe9', '#ffffff'],
 }
