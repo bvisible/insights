@@ -28,7 +28,11 @@ from insights.insights.doctype.insights_table_v3.insights_table_v3 import (
     InsightsTablev3,
 )
 from insights.insights.query_builders.sql_functions import handle_timespan
-from insights.insights.query_utils import extract_sql_table_refs, get_direct_dependencies
+from insights.insights.query_utils import (
+    extract_sql_cte_aliases,
+    extract_sql_table_refs,
+    get_direct_dependencies,
+)
 from insights.utils import create_execution_log
 from insights.utils import deep_convert_dict_to_dict as _dict
 
@@ -705,6 +709,7 @@ class IbisQueryBuilder:
             replace_map = self._get_sql_table_bindings(
                 data_source,
                 tables,
+                cte_aliases=extract_sql_cte_aliases(raw_sql, dialect=source_dialect),
                 dialect=source_dialect,
                 use_live_connection=self.use_live_connection,
                 check_permissions=check_permissions,
@@ -808,27 +813,112 @@ class IbisQueryBuilder:
         dialect: sg.Dialect | None,
         use_live_connection: bool,
         check_permissions: bool,
+        cte_aliases: set[str] | None = None,
     ) -> dict[str, str]:
         replace_map = {}
 
         for table_name in tables:
-            table_expr = InsightsTablev3.get_ibis_table(
+            table_sql = self._get_sql_table_binding(
                 data_source,
                 table_name,
+                dialect=dialect,
                 use_live_connection=use_live_connection,
+                check_permissions=check_permissions,
             )
-            table_sql = ibis.to_sql(table_expr)
-
-            if use_live_connection and check_permissions:
-                table_sql_parsed = sg.parse_one(table_sql, dialect=dialect)
-                if not table_sql_parsed.find(sg.exp.Where):
-                    # if we are running in live connection and there are no permission filters applied,
-                    # we skip replacing the table with a subquery
-                    continue
+            # a table with no restriction to apply does not need a binding
+            if table_sql is None:
+                continue
 
             replace_map[table_name] = table_sql
 
+        if check_permissions and cte_aliases:
+            self._reject_shadowed_tables(
+                data_source,
+                cte_aliases,
+                dialect=dialect,
+                use_live_connection=use_live_connection,
+            )
+
         return replace_map
+
+    def _get_sql_table_binding(
+        self,
+        data_source: str,
+        table_name: str,
+        dialect: sg.Dialect | None,
+        use_live_connection: bool,
+        check_permissions: bool,
+    ) -> str | None:
+        table_expr = InsightsTablev3.get_ibis_table(
+            data_source,
+            table_name,
+            use_live_connection=use_live_connection,
+        )
+        table_sql = ibis.to_sql(table_expr)
+
+        if use_live_connection and check_permissions:
+            table_sql_parsed = sg.parse_one(table_sql, dialect=dialect)
+            if not table_sql_parsed.find(sg.exp.Where):
+                # a live connection with no permission filter applied needs no
+                # subquery in place of the table
+                return None
+
+        return table_sql
+
+    def _reject_shadowed_tables(
+        self,
+        data_source: str,
+        cte_aliases: set[str],
+        dialect: sg.Dialect | None,
+        use_live_connection: bool,
+    ) -> None:
+        """Refuse a CTE named after a table that carries a restriction.
+
+        extract_sql_table_refs() drops a table whose name matches a CTE alias, so
+
+            WITH tabUser AS (SELECT * FROM tabUser) SELECT * FROM tabUser
+
+        left `tables` empty: InsightsTablev3.get_ibis_table() was never called, so
+        neither the permission check nor the restricted binding ran and the raw SQL
+        reached the backend as written. From here nothing can say which of the two
+        the engine will resolve, so refuse the statement — renaming the CTE is
+        always available to its author. Only a name that actually hides a
+        restriction is refused; every other CTE name stays usable.
+        """
+        shadowed = []
+        for alias in sorted(cte_aliases):
+            if not self._is_known_table(data_source, alias):
+                continue
+
+            binding = self._get_sql_table_binding(
+                data_source,
+                alias,
+                dialect=dialect,
+                use_live_connection=use_live_connection,
+                check_permissions=True,
+            )
+            if binding is not None:
+                shadowed.append(alias)
+
+        if shadowed:
+            frappe.throw(
+                frappe._(
+                    "A common table expression cannot be named after a restricted table: {0}."
+                    " Please rename it."
+                ).format(", ".join(shadowed)),
+                frappe.PermissionError,
+                title=frappe._("Unsupported SQL Query"),
+            )
+
+    def _is_known_table(self, data_source: str, table_name: str) -> bool:
+        """Whether `table_name` is a table Insights knows about for this source.
+
+        A name it does not know carries neither a permission nor a restriction, so
+        a CTE is free to take it.
+        """
+        from insights.insights.doctype.insights_table_v3.insights_table_v3 import get_table_name
+
+        return bool(frappe.db.exists("Insights Table v3", get_table_name(data_source, table_name)))
 
     def _replace_sql_tables(
         self,

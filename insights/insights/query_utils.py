@@ -37,6 +37,21 @@ def extract_sql_table_refs(raw_sql: str, dialect: sg.Dialect | None = None) -> l
     return table_refs
 
 
+def extract_sql_cte_aliases(raw_sql: str, dialect: sg.Dialect | None = None) -> set[str]:
+    """The CTE names a statement declares.
+
+    extract_sql_table_refs() drops a table whose name matches a CTE alias, so a
+    caller that only reads the table refs never learns that the statement also
+    names a real table. Anything that binds tables by name has to see both lists.
+    """
+    try:
+        parsed = sg.parse_one(raw_sql, dialect=dialect)
+    except Exception:
+        return set()
+
+    return {cte_exp.alias_or_name for cte_exp in parsed.find_all(sg.exp.CTE) if cte_exp.alias_or_name}
+
+
 def extract_query_deps_from_operations(operations: list) -> list[str]:
     """Extract all referenced query names from a list of operations."""
     return [

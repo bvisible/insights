@@ -2,6 +2,7 @@ import frappe
 import sqlglot as sg
 
 from insights.insights.doctype.insights_data_source_v3.ibis_utils import IbisQueryBuilder
+from insights.insights.query_utils import extract_sql_cte_aliases
 from insights.tests.base import InsightsIntegrationTestCase
 
 SITE_DB = "Site DB"
@@ -157,3 +158,77 @@ class TestNativeSQL(InsightsIntegrationTestCase):
         # would bind whichever `orders` the default schema holds
         with self.assertRaises(frappe.ValidationError):
             self.builder._get_sql_table_names("select * from sales.orders", dialect=self.dialect)
+
+    # --- a CTE cannot hide the table it is named after ---
+
+    def pretend_restricted(self, *table_names):
+        """Answer as if `table_names` were known tables carrying a restriction.
+
+        Which tables are restricted depends on the site's teams; what is under test
+        is what the bindings do once one of them is.
+        """
+        restricted = set(table_names)
+        asked = []
+
+        def is_known_table(data_source, table_name):
+            return table_name in restricted
+
+        def get_binding(data_source, table_name, **kwargs):
+            asked.append(table_name)
+            if table_name not in restricted:
+                return None
+            return f"SELECT * FROM `{table_name}` WHERE `owner` = 'someone'"
+
+        self.builder._is_known_table = is_known_table
+        self.builder._get_sql_table_binding = get_binding
+        self.addCleanup(self.builder.__dict__.pop, "_is_known_table", None)
+        self.addCleanup(self.builder.__dict__.pop, "_get_sql_table_binding", None)
+        return asked
+
+    def bindings(self, raw_sql):
+        tables = self.builder._get_sql_table_names(raw_sql, dialect=self.dialect)
+        return self.builder._get_sql_table_bindings(
+            SITE_DB,
+            tables,
+            cte_aliases=extract_sql_cte_aliases(raw_sql, dialect=self.dialect),
+            dialect=self.dialect,
+            use_live_connection=True,
+            check_permissions=True,
+        )
+
+    def test_a_cte_named_after_a_restricted_table_is_refused(self):
+        # the shape that used to slip through: the CTE empties the table set, so
+        # nothing was bound and the raw SQL went to the backend as written
+        self.pretend_restricted("tabUser")
+
+        with self.assertRaises(frappe.PermissionError):
+            self.bindings("with `tabUser` as (select * from `tabUser`) select * from `tabUser`")
+
+    def test_a_cte_named_after_an_unrestricted_table_is_allowed(self):
+        self.pretend_restricted()  # nothing is restricted
+
+        self.assertEqual(
+            self.bindings("with `tabUser` as (select 1 as one) select * from `tabUser`"), {}
+        )
+
+    def test_a_cte_of_its_own_name_leaves_the_table_bound(self):
+        self.pretend_restricted("tabUser")
+
+        replace_map = self.bindings(
+            "with recent as (select * from `tabUser`) select * from recent"
+        )
+
+        self.assertIn("tabUser", replace_map)
+        self.assertNotIn("recent", replace_map)
+
+    def test_extract_sql_cte_aliases_reports_what_the_table_refs_drop(self):
+        raw_sql = "with `tabUser` as (select * from `tabUser`) select * from `tabUser`"
+
+        self.assertEqual(
+            extract_sql_cte_aliases(raw_sql, dialect=self.dialect), {"tabUser"}
+        )
+        self.assertEqual(
+            self.builder._get_sql_table_names(raw_sql, dialect=self.dialect),
+            set(),
+            "the table refs alone report nothing — that is the whole defect",
+        )
