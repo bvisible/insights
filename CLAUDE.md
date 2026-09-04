@@ -1,3 +1,8 @@
+<!-- //// Neoffice — added file (no upstream equivalent at the fork point):
+     //// branch/remote conventions of this fork and the commit-the-build
+     //// pipeline. Upstream has since added its own CLAUDE.md on develop —
+     //// expect a whole-file conflict at the merge and keep BOTH contents. -->
+
 # Git Configuration
 
 ## Branch de production

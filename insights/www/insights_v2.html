@@ -28,6 +28,11 @@
 		<div id="modals"></div>
 		<div id="popovers"></div>
 
+		<!-- //// Neoffice — this page's build output is COMMITTED to the repo
+		     //// (insights/www/insights_v2.html + insights/public/frontend/), which
+		     //// upstream gitignores and rebuilds on every instance. Our 2 GB
+		     //// instances OOM on that build. Keep this comment: vite copies it
+		     //// verbatim, so it is the marker the committed artifact carries. -->
 		<script>
 			window.csrf_token = '{{ csrf_token }}'
 			window.site_name = '{{ site_name }}'

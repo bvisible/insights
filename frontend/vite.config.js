@@ -38,8 +38,14 @@ export default defineConfig({
 	build: {
 		outDir: `../insights/public/frontend`,
 		emptyOutDir: true,
+		//// Neoffice — sourcemap off (upstream: true). Sourcemaps roughly double the
+		//// build's peak memory and the shipped artifact size; the 2 GB instances OOM
+		//// with them and nobody debugs from an instance — the bundle is pre-built.
 		sourcemap: false,
 		rollupOptions: {
+			//// Neoffice — added. rollup's default parallelism OOM'd the 2 GB builder, and
+			//// common_site_config.json / ../../../frappe/ only exist inside a bench, so a
+			//// standalone build (CI, laptop) fails to resolve them: externalise both.
 			maxParallelFileOps: 2,
 			// Ignore Frappe bench-specific imports that don't exist in standalone builds
 			external: [
