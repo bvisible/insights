@@ -10,7 +10,9 @@ settings.load()
 
 <template>
 	<div class="flex w-full flex-col gap-6 overflow-y-scroll p-8 px-10">
+		<!-- //// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French -->
 		<h1 class="text-xl font-semibold">{{ __("General") }}</h1>
+		<!-- //// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French -->
 		<SettingItem
 			:label="__('Logo')"
 			:description="__('Appears in the top left corner of the application and in the browser tab next to the page title. Recommended size: 32x32px in PNG format.')"
@@ -20,10 +22,12 @@ settings.load()
 			</div>
 		</SettingItem>
 
+		<!-- //// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French -->
 		<SettingItem
 			:label="__('Fiscal Year Start')"
 			:description="__('Set the start of the fiscal year for the organization. This will be used to calculate quarterly and yearly data.')"
 		>
+			<!-- //// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French -->
 			<DatePickerControl
 				class="w-28"
 				:placeholder="__('Select Date')"
@@ -32,6 +36,7 @@ settings.load()
 			/>
 		</SettingItem>
 
+		<!-- //// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French -->
 		<SettingItem
 			:label="__('Week Starts On')"
 			:description="__('Set the start of the week for the organization. This will be used to calculate weekly data.')"
@@ -53,6 +58,7 @@ settings.load()
 		</SettingItem>
 
 		<div class="flex justify-end">
+			<!-- //// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French -->
 			<Button
 				:label="__('Update')"
 				variant="solid"

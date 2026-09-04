@@ -5,6 +5,9 @@ import { computed, ref, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 import useDashboardStore, { DashboardListItem } from './dashboards'
 import DashboardCard from './DashboardCard.vue'
+//// Neoffice — added import. The whole file's user-facing strings are wrapped in
+//// __() (upstream hardcodes English); the French catalogue lives in
+//// insights/locale/fr.po. Keep this import when merging upstream's version.
 import { __ } from '../translation'
 
 const store = useDashboardStore()
@@ -21,11 +24,13 @@ const router = useRouter()
 const dropdownOptions = (dashboard: DashboardListItem) => {
 	return [
 		{
+			//// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French
 			label: __('Open Workbook'),
 			icon: 'external-link',
 			onClick: () => router.push(`/workbook/${dashboard.workbook}`),
 		},
 		{
+			//// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French
 			label: __('Refresh Preview'),
 			icon: 'refresh-cw',
 			loading: store.updatingPreviewImage,
@@ -39,18 +44,21 @@ const toggleFavorite = (dashboard: DashboardListItem) => {
 }
 
 watchEffect(() => {
+	//// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French
 	document.title = __('Dashboards') + ' | Insights'
 })
 </script>
 
 <template>
 	<header class="flex h-12 items-center justify-between border-b py-2.5 pl-5 pr-2">
+		<!-- //// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French -->
 		<Breadcrumbs :items="[{ label: __('Dashboards'), route: '/dashboards' }]" />
 		<div class="flex items-center gap-2"></div>
 	</header>
 
 	<div class="mb-4 flex h-full flex-col gap-3 overflow-auto px-5 py-3">
 		<div class="flex gap-2 overflow-visible py-1">
+			<!-- //// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French -->
 			<FormControl :placeholder="__('Search')" v-model="searchQuery" :debounce="300">
 				<template #prefix>
 					<SearchIcon class="h-4 w-4 text-gray-500" />
@@ -60,6 +68,7 @@ watchEffect(() => {
 		<!-- favourite dashboards -->
 		<div class="h-full w-full">
 			<div v-if="favorites.length > 0" class="mb-8">
+				<!-- //// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French -->
 				<h2 class="mb-4 text-lg font-semibold text-gray-700">{{ __("Favorites") }}</h2>
 				<div class="grid grid-cols-1 gap-10 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 					<DashboardCard
@@ -75,6 +84,7 @@ watchEffect(() => {
 			</div>
 			<!-- all dashboards -->
 			<div v-if="store.dashboards.length">
+				<!-- //// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French -->
 				<h2 v-if="favorites.length > 0" class="mb-4 text-lg font-semibold text-gray-700">
 					{{ __("All Dashboards") }}
 				</h2>
@@ -93,7 +103,9 @@ watchEffect(() => {
 
 			<!-- Empty State -->
 			<div v-else class="flex h-full w-full flex-col items-center justify-center text-base">
+				<!-- //// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French -->
 				<div class="text-xl font-medium">{{ __("No Dashboards") }}</div>
+				<!-- //// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French -->
 				<div class="mt-1 text-base text-gray-600">
 					{{ __("Create a dashboard in your workbook to view it here.") }}
 				</div>

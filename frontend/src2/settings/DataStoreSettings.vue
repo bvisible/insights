@@ -9,8 +9,10 @@ settings.load()
 
 <template>
 	<div class="flex w-full flex-col gap-6 overflow-y-scroll p-8 px-10">
+		<!-- //// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French -->
 		<h1 class="text-xl font-semibold">{{ __("Data Store") }}</h1>
 
+		<!-- //// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French -->
 		<SettingItem
 			:label="__('Enable')"
 			:description="__('Enable the data store to store database tables into a duckdb database for faster & cross-database queries.')"
@@ -18,6 +20,7 @@ settings.load()
 			<Toggle v-model="settings.doc.enable_data_store" />
 		</SettingItem>
 
+		<!-- //// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French -->
 		<SettingItem
 			:label="__('Row Limit')"
 			:description="__('Set the maximum number of rows per table that will be imported into the data store. Default is 10,00,000')"
@@ -25,6 +28,7 @@ settings.load()
 			<FormControl v-model="settings.doc.max_records_to_sync" class="w-28" type="number" />
 		</SettingItem>
 
+		<!-- //// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French -->
 		<SettingItem
 			:label="__('Memory Limit')"
 			:description="__('Set the maximum memory usage while importing tables into the data store. Default is 512MB')"
@@ -33,6 +37,7 @@ settings.load()
 		</SettingItem>
 
 		<div class="flex justify-end">
+			<!-- //// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French -->
 			<Button
 				:label="__('Update')"
 				variant="solid"

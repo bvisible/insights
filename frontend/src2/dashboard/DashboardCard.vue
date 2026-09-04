@@ -42,6 +42,7 @@ const emit = defineEmits<{
 					<template #prefix>
 						<RefreshCw class="h-3.5 w-3.5 text-gray-500" />
 					</template>
+					<!-- //// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French -->
 					<span class="text-gray-500">{{ __("Load Preview") }}</span>
 				</Button>
 			</div>
