@@ -259,6 +259,19 @@ class InsightsQueryv3(Document):
 
         linked_queries = frappe.parse_json(self.linked_queries)
         for q in linked_queries:
+            #//// Neoffice — security fix, upstream defect (frappe/insights): the
+            #//// dependencies of an exported query were loaded and returned without
+            #//// any permission check, so exporting a query you own handed you the
+            #//// full definition (operations, data source, native SQL) of every
+            #//// query it references — including the ones belonging to someone else,
+            #//// since `linked_queries` is computed server-side and spans workbooks.
+            #//// has_permission(throw=False) skips what the caller may not read
+            #//// instead of failing the whole export, which would break importing a
+            #//// workbook that legitimately lost one of its dependencies.
+            #//// (drop AT THE MERGE with upstream/develop, which already calls
+            #//// check_referenced_query_access() here — the same fix.)
+            if not frappe.has_permission("Insights Query v3", "read", doc=q):
+                continue
             exported_query = frappe.get_doc("Insights Query v3", q).export()
             query["dependencies"]["queries"][q] = exported_query
 
