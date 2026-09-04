@@ -1,6 +1,10 @@
 # Copyright (c) 2022, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
+#//// Neoffice — was `from urllib.parse import quote_plus`: quoting the whole DSN
+#//// broke it, so only its user-info part is escaped now (see quote_dsn_credentials).
+#//// (drop once upstream PR from bvisible/insights branch
+#//// upstream/security-hardening-2026-09 is merged into frappe/insights)
 from urllib.parse import quote, unquote, urlsplit, urlunsplit
 
 import ibis
