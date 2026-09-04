@@ -12,6 +12,9 @@ from insights.insights.doctype.insights_query.utils import infer_type_from_list
 from insights.insights.doctype.insights_table_link_v3.insights_table_link_v3 import (
     InsightsTableLinkv3,
 )
+from insights.insights.doctype.insights_table_v3.insights_table_v3 import (
+    InsightsTablev3,
+)
 from insights.insights.doctype.insights_team.insights_team import (
     check_data_source_permission,
     check_table_permission,
@@ -325,8 +328,16 @@ def get_data_source_tables(data_source=None, search_term=None, limit=100):
 @validate_type
 def get_data_source_table(data_source: str, table_name: str):
     check_table_permission(data_source, table_name)
-    ds = frappe.get_doc("Insights Data Source v3", data_source)
-    q = ds.get_ibis_table(table_name).head(100)
+    #//// Neoffice — security fix, upstream defect (frappe/insights): upstream read
+    #//// the table through `ds.get_ibis_table()`, the RAW accessor, which skips
+    #//// apply_table_restrictions() and apply_user_permissions(). On the site
+    #//// database that handed every caller the unfiltered contents of any table
+    #//// (tabUser included). InsightsTablev3.get_ibis_table() is the same live
+    #//// connection with both filters applied; use_live_connection=True keeps the
+    #//// previous behaviour of reading the source rather than the warehouse copy.
+    #//// (drop AT THE MERGE with upstream/develop, which already routes these
+    #//// three endpoints through get_permitted_ibis_table() — the same fix.)
+    q = InsightsTablev3.get_ibis_table(data_source, table_name, use_live_connection=True).head(100)
     data, time_taken = execute_ibis_query(q, cache_expiry=24 * 60 * 60)
 
     return {
@@ -341,8 +352,16 @@ def get_data_source_table(data_source: str, table_name: str):
 @validate_type
 def get_data_source_table_row_count(data_source: str, table_name: str):
     check_table_permission(data_source, table_name)
-    ds = frappe.get_doc("Insights Data Source v3", data_source)
-    table = ds.get_ibis_table(table_name)
+    #//// Neoffice — security fix, upstream defect (frappe/insights): upstream read
+    #//// the table through `ds.get_ibis_table()`, the RAW accessor, which skips
+    #//// apply_table_restrictions() and apply_user_permissions(). On the site
+    #//// database that handed every caller the unfiltered contents of any table
+    #//// (tabUser included). InsightsTablev3.get_ibis_table() is the same live
+    #//// connection with both filters applied; use_live_connection=True keeps the
+    #//// previous behaviour of reading the source rather than the warehouse copy.
+    #//// (drop AT THE MERGE with upstream/develop, which already routes these
+    #//// three endpoints through get_permitted_ibis_table() — the same fix.)
+    table = InsightsTablev3.get_ibis_table(data_source, table_name, use_live_connection=True)
     result = table.count().execute()
     return int(result)
 
@@ -352,8 +371,16 @@ def get_data_source_table_row_count(data_source: str, table_name: str):
 @validate_type
 def get_data_source_table_columns(data_source: str, table_name: str):
     check_table_permission(data_source, table_name)
-    ds = frappe.get_doc("Insights Data Source v3", data_source)
-    table = ds.get_ibis_table(table_name)
+    #//// Neoffice — security fix, upstream defect (frappe/insights): upstream read
+    #//// the table through `ds.get_ibis_table()`, the RAW accessor, which skips
+    #//// apply_table_restrictions() and apply_user_permissions(). On the site
+    #//// database that handed every caller the unfiltered contents of any table
+    #//// (tabUser included). InsightsTablev3.get_ibis_table() is the same live
+    #//// connection with both filters applied; use_live_connection=True keeps the
+    #//// previous behaviour of reading the source rather than the warehouse copy.
+    #//// (drop AT THE MERGE with upstream/develop, which already routes these
+    #//// three endpoints through get_permitted_ibis_table() — the same fix.)
+    table = InsightsTablev3.get_ibis_table(data_source, table_name, use_live_connection=True)
     return [
         frappe._dict(
             column=column,
