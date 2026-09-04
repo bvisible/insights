@@ -121,6 +121,16 @@ class InsightsPermissions:
             return True
 
         docs = self._build_permission_query(doc.doctype, access_type)
+        if docs is None:
+            # There is no query to run for the team-based doctypes while team
+            # permissions are off. get_permission_query_conditions() answers that
+            # with "" a few lines above — no team restriction — so answer the same
+            # here instead of calling .where() on None, which raised AttributeError
+            # and turned every read of a document the caller does not own into an
+            # HTTP 500. Fails closed for a doctype added to PERMISSION_DOCTYPES
+            # without a query builder.
+            return doc.doctype in TEAM_BASED_PERMISSION_DOCTYPES
+
         return docs.where(frappe.qb.DocType(doc.doctype).name == doc.name).limit(1).run(pluck="name")
 
     def _build_permission_query(self, doctype, ptype):
