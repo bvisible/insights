@@ -102,6 +102,21 @@ class InsightsPermissions:
             return True
 
         docs = self._build_permission_query(doc.doctype, access_type)
+        #//// Neoffice — security fix, upstream defect (frappe/insights): when team
+        #//// permissions are off, _build_permission_query() returns None for the
+        #//// team-based doctypes, and `None.where(...)` raised
+        #//// `AttributeError: NoneType has no attribute where` -> HTTP 500 on every
+        #//// read of a data source or table the caller does not own. Answer the same
+        #//// way get_permission_query_conditions() does a few lines above (`if not
+        #//// docs: return ""`, i.e. no team restriction): allowed for the doctypes
+        #//// upstream documents as "accessible to all insights users" when team
+        #//// permissions are disabled, denied otherwise (fail closed for any doctype
+        #//// added to PERMISSION_DOCTYPES without a query builder).
+        #//// (drop once upstream PR the upstream PR from bvisible/insights branch
+#//// upstream/security-hardening-2026-09 is merged into frappe/insights)
+        if docs is None:
+            return doc.doctype in TEAM_BASED_PERMISSION_DOCTYPES
+
         return docs.where(frappe.qb.DocType(doc.doctype).name == doc.name).limit(1).run(pluck="name")
 
     def _build_permission_query(self, doctype, ptype):
