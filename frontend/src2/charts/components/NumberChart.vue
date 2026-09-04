@@ -56,6 +56,10 @@ const cards = computed(() => {
 
 		return {
 			measure_name,
+			//// Neoffice — added. Upstream titles each number card with the raw measure
+			//// name; a number_columns row may now carry an optional `label` that wins
+			//// over it, so a card can read "Chiffre d'affaires" and not "sum(total)".
+			//// Falls back to measure_name, so upstream charts are unaffected.
 			label: config.value.number_columns[idx]?.label || measure_name,
 			values: numberValues,
 			currentValue: getFormattedValue(currentValue, decimal, shorten_numbers),
@@ -99,6 +103,7 @@ function onDoubleClick(measure_name: string) {
 			<div
 				v-for="{
 					measure_name,
+					/* //// Neoffice — destructured for the optional per-column label (see above) */
 					label,
 					values,
 					currentValue,
@@ -114,6 +119,8 @@ function onDoubleClick(measure_name: string) {
 				@dblclick="onDoubleClick(measure_name)"
 			>
 				<div class="flex w-full flex-col">
+					<!-- //// Neoffice — the card title prefers the custom label, upstream showed
+					     //// measure_name only. -->
 					<span class="truncate text-sm font-medium">
 						{{ label || measure_name }}
 					</span>
