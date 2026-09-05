@@ -23,6 +23,10 @@ jobs:
     with:
       app: insights
       skip_build: true   # SPA commit-the-build: assets committed, never built on instances
+      # Tests that render an e-mail (a User insert sends the welcome mail) read
+      # frappe's assets.json for the e-mail CSS bundle; without it bundled_asset()
+      # dies on None. Builds frappe's own assets only, not the SPA.
+      build_frappe_assets: true
       test_args: ${{ inputs.test_args || '' }}
     # inherit: CI_REPORT_SECRET (deps are public forks: no read token needed)
     secrets: inherit
