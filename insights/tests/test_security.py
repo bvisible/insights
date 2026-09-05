@@ -43,6 +43,9 @@ class TestInsightsSecurity(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        # A test that fails after frappe.set_user() leaks that user into the whole
+        # run; the users below must be created by Administrator whatever ran before.
+        frappe.set_user("Administrator")
         make_insights_user(TEST_USER)
         make_insights_user(OTHER_USER)
 

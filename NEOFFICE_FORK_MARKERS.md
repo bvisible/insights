@@ -190,6 +190,22 @@ with it. **Re-home the token block in `frontend/src2/index.css`** rather than
 carrying it into a deleted file. (The clay *chart* palette is unaffected: it
 lives in `src2/charts/colors.ts` and is compiled into the shared chunk.)
 
+### Deleted test modules (2026-09-05) — take upstream's deletion at the merge
+
+Three upstream v2 test modules were dead at our base and are gone from `upstream/develop`
+(`0abeb72f` "refactor!: remove v2 code"); they never ran green here and one of them poisoned
+every test after it:
+
+| deleted | why it could not pass |
+|---|---|
+| `insights/insights/doctype/insights_team/test_insights_team.py` | calls `InsightsTeam.get_allowed_queries` (v2, removed) **after** `frappe.set_user("abc@example.com")`, so the failure leaked a rolled-back user into the session: the 8 `TestInsightsPermissions` tests then died in `PermissionError` and our `test_security.setUpClass` in `LinkValidationError` |
+| `insights/insights/query_builders/test_sql_builder.py` | imports `get_date_range` (removed) and builds `SQLQueryBuilder()` without the `engine` the v3 class requires |
+| `insights/insights/doctype/insights_data_source/test_insights_data_source.py` | needs a `sales` MariaDB with `demouser` on the runner and calls `create_parquet_file` / `get_db_table` (removed) |
+
+The v2 **code** stays (fleet data may still sit in v2 doctypes); only the tests went. Two v2 code
+defects were fixed instead of deleted, both marked: `FrappeTableFactory.get_table_columns`
+restored (`9f71b28c`) and the dead `build_ibis_query` import (cherry-pick of upstream `3baf7f84`).
+
 ## Auto-marked (fork-markers workflow)
 
 The fork-markers bot wrote this entry while the file was empty — 7e711e98 had
