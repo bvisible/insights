@@ -173,10 +173,10 @@ node_modules
 *debug.log
 insights/docs/current
 
-#//// Neoffice — un-ignored on purpose. Upstream ignores the vite output because
-#//// every instance runs `yarn build` itself; our 2 GB instances OOM on that
-#//// build, so the artifact is committed here and the fleet pulls it ready-made
-#//// (commit-the-build). Re-ignoring these three paths empties the fleet's SPA.
+# //// Neoffice — un-ignored on purpose. Upstream ignores the vite output because
+# //// every instance runs `yarn build` itself; our 2 GB instances OOM on that
+# //// build, so the artifact is committed here and the fleet pulls it ready-made
+# //// (commit-the-build). Re-ignoring these three paths empties the fleet's SPA.
 # 2026-05-07 (NORA #28) — frontend build outputs are committed on this branch.
 # See docs/COMMIT-BUILD-PATTERN.md in neoffice-devops.
 # insights/public/frontend
@@ -191,6 +191,6 @@ pids
 *.seed
 *.pid.lock
 todo
-#//// Neoffice — CLAUDE.md deliberately NOT ignored: it carries the branch and
-#//// commit-the-build conventions of this fork and must travel with the repo.
+# //// Neoffice — CLAUDE.md deliberately NOT ignored: it carries the branch and
+# //// commit-the-build conventions of this fork and must travel with the repo.
 # CLAUDE.md  # 2026-05-07 unshipped to document commit-the-build pipeline

@@ -217,14 +217,14 @@ class InsightsDataSourcev3(InsightsDataSourceDocument, Document):
         api_username: DF.Data | None
         bigquery_dataset_id: DF.Data | None
         bigquery_project_id: DF.Data | None
-        #//// Neoffice — inside the auto-generated block on purpose: both fields
-        #//// became Password in the DocType JSON (they held a database DSN and a
-        #//// service-account key in clear, readable by any Insights User through
-        #//// frappe.client.get_list), and the annotations have to follow. Regenerating
-        #//// this block yields the same two lines, so this marker may be swept away;
-        #//// the JSON stays the source of truth.
-        #//// (drop once upstream PR the upstream PR from bvisible/insights branch
-#//// upstream/security-hardening-2026-09 is merged into frappe/insights)
+        # //// Neoffice — inside the auto-generated block on purpose: both fields
+        # //// became Password in the DocType JSON (they held a database DSN and a
+        # //// service-account key in clear, readable by any Insights User through
+        # //// frappe.client.get_list), and the annotations have to follow. Regenerating
+        # //// this block yields the same two lines, so this marker may be swept away;
+        # //// the JSON stays the source of truth.
+        # //// (drop once upstream PR the upstream PR from bvisible/insights branch
+# //// upstream/security-hardening-2026-09 is merged into frappe/insights)
         bigquery_service_account_key: DF.Password | None
         connection_string: DF.Password | None
         database_name: DF.Data | None

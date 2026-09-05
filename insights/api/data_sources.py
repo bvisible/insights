@@ -12,11 +12,11 @@ from insights.insights.doctype.insights_query.utils import infer_type_from_list
 from insights.insights.doctype.insights_table_link_v3.insights_table_link_v3 import (
     InsightsTableLinkv3,
 )
-#//// Neoffice — added import: the three table endpoints below read through
-#//// InsightsTablev3.get_ibis_table(), which applies the table restrictions and the
-#//// user permissions, instead of the raw ds.get_ibis_table().
-#//// (drop AT THE MERGE with upstream/develop, which already routes these three
-#//// endpoints through get_permitted_ibis_table() — the same fix.)
+# //// Neoffice — added import: the three table endpoints below read through
+# //// InsightsTablev3.get_ibis_table(), which applies the table restrictions and the
+# //// user permissions, instead of the raw ds.get_ibis_table().
+# //// (drop AT THE MERGE with upstream/develop, which already routes these three
+# //// endpoints through get_permitted_ibis_table() — the same fix.)
 from insights.insights.doctype.insights_table_v3.insights_table_v3 import (
     InsightsTablev3,
 )
@@ -333,15 +333,15 @@ def get_data_source_tables(data_source=None, search_term=None, limit=100):
 @validate_type
 def get_data_source_table(data_source: str, table_name: str):
     check_table_permission(data_source, table_name)
-    #//// Neoffice — security fix, upstream defect (frappe/insights): upstream read
-    #//// the table through `ds.get_ibis_table()`, the RAW accessor, which skips
-    #//// apply_table_restrictions() and apply_user_permissions(). On the site
-    #//// database that handed every caller the unfiltered contents of any table
-    #//// (tabUser included). InsightsTablev3.get_ibis_table() is the same live
-    #//// connection with both filters applied; use_live_connection=True keeps the
-    #//// previous behaviour of reading the source rather than the warehouse copy.
-    #//// (drop AT THE MERGE with upstream/develop, which already routes these
-    #//// three endpoints through get_permitted_ibis_table() — the same fix.)
+    # //// Neoffice — security fix, upstream defect (frappe/insights): upstream read
+    # //// the table through `ds.get_ibis_table()`, the RAW accessor, which skips
+    # //// apply_table_restrictions() and apply_user_permissions(). On the site
+    # //// database that handed every caller the unfiltered contents of any table
+    # //// (tabUser included). InsightsTablev3.get_ibis_table() is the same live
+    # //// connection with both filters applied; use_live_connection=True keeps the
+    # //// previous behaviour of reading the source rather than the warehouse copy.
+    # //// (drop AT THE MERGE with upstream/develop, which already routes these
+    # //// three endpoints through get_permitted_ibis_table() — the same fix.)
     q = InsightsTablev3.get_ibis_table(data_source, table_name, use_live_connection=True).head(100)
     data, time_taken = execute_ibis_query(q, cache_expiry=24 * 60 * 60)
 
@@ -357,15 +357,15 @@ def get_data_source_table(data_source: str, table_name: str):
 @validate_type
 def get_data_source_table_row_count(data_source: str, table_name: str):
     check_table_permission(data_source, table_name)
-    #//// Neoffice — security fix, upstream defect (frappe/insights): upstream read
-    #//// the table through `ds.get_ibis_table()`, the RAW accessor, which skips
-    #//// apply_table_restrictions() and apply_user_permissions(). On the site
-    #//// database that handed every caller the unfiltered contents of any table
-    #//// (tabUser included). InsightsTablev3.get_ibis_table() is the same live
-    #//// connection with both filters applied; use_live_connection=True keeps the
-    #//// previous behaviour of reading the source rather than the warehouse copy.
-    #//// (drop AT THE MERGE with upstream/develop, which already routes these
-    #//// three endpoints through get_permitted_ibis_table() — the same fix.)
+    # //// Neoffice — security fix, upstream defect (frappe/insights): upstream read
+    # //// the table through `ds.get_ibis_table()`, the RAW accessor, which skips
+    # //// apply_table_restrictions() and apply_user_permissions(). On the site
+    # //// database that handed every caller the unfiltered contents of any table
+    # //// (tabUser included). InsightsTablev3.get_ibis_table() is the same live
+    # //// connection with both filters applied; use_live_connection=True keeps the
+    # //// previous behaviour of reading the source rather than the warehouse copy.
+    # //// (drop AT THE MERGE with upstream/develop, which already routes these
+    # //// three endpoints through get_permitted_ibis_table() — the same fix.)
     table = InsightsTablev3.get_ibis_table(data_source, table_name, use_live_connection=True)
     result = table.count().execute()
     return int(result)
@@ -376,15 +376,15 @@ def get_data_source_table_row_count(data_source: str, table_name: str):
 @validate_type
 def get_data_source_table_columns(data_source: str, table_name: str):
     check_table_permission(data_source, table_name)
-    #//// Neoffice — security fix, upstream defect (frappe/insights): upstream read
-    #//// the table through `ds.get_ibis_table()`, the RAW accessor, which skips
-    #//// apply_table_restrictions() and apply_user_permissions(). On the site
-    #//// database that handed every caller the unfiltered contents of any table
-    #//// (tabUser included). InsightsTablev3.get_ibis_table() is the same live
-    #//// connection with both filters applied; use_live_connection=True keeps the
-    #//// previous behaviour of reading the source rather than the warehouse copy.
-    #//// (drop AT THE MERGE with upstream/develop, which already routes these
-    #//// three endpoints through get_permitted_ibis_table() — the same fix.)
+    # //// Neoffice — security fix, upstream defect (frappe/insights): upstream read
+    # //// the table through `ds.get_ibis_table()`, the RAW accessor, which skips
+    # //// apply_table_restrictions() and apply_user_permissions(). On the site
+    # //// database that handed every caller the unfiltered contents of any table
+    # //// (tabUser included). InsightsTablev3.get_ibis_table() is the same live
+    # //// connection with both filters applied; use_live_connection=True keeps the
+    # //// previous behaviour of reading the source rather than the warehouse copy.
+    # //// (drop AT THE MERGE with upstream/develop, which already routes these
+    # //// three endpoints through get_permitted_ibis_table() — the same fix.)
     table = InsightsTablev3.get_ibis_table(data_source, table_name, use_live_connection=True)
     return [
         frappe._dict(

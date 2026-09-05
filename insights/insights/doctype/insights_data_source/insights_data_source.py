@@ -216,11 +216,11 @@ class InsightsDataSource(
             "username": self.username,
             "password": password,
             "database_name": self.database_name,
-            #//// Neoffice — read through get_password(): `connection_string` is now
-            #//// a Password field on this doctype too (v2 grants read to every
-            #//// Insights User, so the DSN was handed out with the record).
-            #//// (drop once upstream PR the upstream PR from bvisible/insights branch
-#//// upstream/security-hardening-2026-09 is merged into frappe/insights)
+            # //// Neoffice — read through get_password(): `connection_string` is now
+            # //// a Password field on this doctype too (v2 grants read to every
+            # //// Insights User, so the DSN was handed out with the record).
+            # //// (drop once upstream PR the upstream PR from bvisible/insights branch
+# //// upstream/security-hardening-2026-09 is merged into frappe/insights)
             "connection_string": self.get_password("connection_string", raise_exception=False),
         }
 

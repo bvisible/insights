@@ -221,23 +221,23 @@ def _execute_doc_method(doc, method: str, args: dict | None = None, ignore_permi
     return response
 
 
-#//// Neoffice — added helper, security fix, upstream defect (frappe/insights):
-#//// run_doc_method() built the document straight from the request body and then
-#//// checked the permission on THAT object. insights/permissions.py grants access
-#//// as soon as `doc.owner == frappe.session.user`, so a caller who put their own
-#//// e-mail in the payload owned every document they cared to name — and the method
-#//// then ran on a body-supplied definition (operations, data source, live
-#//// connection) instead of the stored one. The editor legitimately previews UNSAVED
-#//// edits through this endpoint, so the body still carries the working copy; what
-#//// it may no longer carry is the identity of the document. Anything that already
-#//// exists in the database is anchored on the stored row — owner, name, creation,
-#//// docstatus and workbook are read from there — and the timestamp held by the
-#//// caller is compared with the stored one (check_if_latest), so a stale editor
-#//// cannot act on a document that moved underneath it. `__islocal` in the payload
-#//// is NOT trusted: the database decides whether the document exists.
-#//// (drop AT THE MERGE with upstream/develop, which already carries
-#//// check_stored_document() — the same fix, gating on the stored row before
-#//// the payload document is built. Take theirs; ours only predates it.)
+# //// Neoffice — added helper, security fix, upstream defect (frappe/insights):
+# //// run_doc_method() built the document straight from the request body and then
+# //// checked the permission on THAT object. insights/permissions.py grants access
+# //// as soon as `doc.owner == frappe.session.user`, so a caller who put their own
+# //// e-mail in the payload owned every document they cared to name — and the method
+# //// then ran on a body-supplied definition (operations, data source, live
+# //// connection) instead of the stored one. The editor legitimately previews UNSAVED
+# //// edits through this endpoint, so the body still carries the working copy; what
+# //// it may no longer carry is the identity of the document. Anything that already
+# //// exists in the database is anchored on the stored row — owner, name, creation,
+# //// docstatus and workbook are read from there — and the timestamp held by the
+# //// caller is compared with the stored one (check_if_latest), so a stale editor
+# //// cannot act on a document that moved underneath it. `__islocal` in the payload
+# //// is NOT trusted: the database decides whether the document exists.
+# //// (drop AT THE MERGE with upstream/develop, which already carries
+# //// check_stored_document() — the same fix, gating on the stored row before
+# //// the payload document is built. Take theirs; ours only predates it.)
 ANCHORED_FIELDS = ("name", "owner", "creation", "docstatus")
 
 
@@ -276,11 +276,11 @@ def run_doc_method(method: str, docs: dict | str, args: dict | None = None):
 
     try:
         docs = frappe.parse_json(docs)
-        #//// Neoffice — was `doc = frappe.get_doc(docs)`, i.e. the permission was
-        #//// checked on a document forged by the caller. See _load_doc_for_method.
-        #//// (drop AT THE MERGE with upstream/develop, which already carries
-#//// check_stored_document() — the same fix, gating on the stored row before
-#//// the payload document is built. Take theirs; ours only predates it.)
+        # //// Neoffice — was `doc = frappe.get_doc(docs)`, i.e. the permission was
+        # //// checked on a document forged by the caller. See _load_doc_for_method.
+        # //// (drop AT THE MERGE with upstream/develop, which already carries
+# //// check_stored_document() — the same fix, gating on the stored row before
+# //// the payload document is built. Take theirs; ours only predates it.)
         doc = _load_doc_for_method(docs, doctype, name)
         return _execute_doc_method(doc, method, args)
 

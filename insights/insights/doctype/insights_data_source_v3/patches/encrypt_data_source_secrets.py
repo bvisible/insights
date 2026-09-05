@@ -1,15 +1,15 @@
-#//// Neoffice — added file (no upstream equivalent). Ships with the security fix
-#//// that turned `Insights Data Source v3.connection_string`,
-#//// `.bigquery_service_account_key` and `Insights Data Source.connection_string`
-#//// into Password fields at permlevel 1: changing the fieldtype only protects
-#//// values written AFTER the change, the ones already in the table stay in clear
-#//// until the row is saved again. This patch moves them into `__Auth` (encrypted)
-#//// and leaves the usual mask in the column, so an install that has been running
-#//// for months ends up in the same state as a fresh one. It also repairs the
-#//// permission level on the instances that carry Custom DocPerm rows for these
-#//// doctypes — see grant_permlevel_access below. Idempotent: a value that is
-#//// already a mask is skipped, and a permission that exists is not added twice.
-#//// (drop once upstream PR bvisible/insights:security-hardening-2026-09 is merged)
+# //// Neoffice — added file (no upstream equivalent). Ships with the security fix
+# //// that turned `Insights Data Source v3.connection_string`,
+# //// `.bigquery_service_account_key` and `Insights Data Source.connection_string`
+# //// into Password fields at permlevel 1: changing the fieldtype only protects
+# //// values written AFTER the change, the ones already in the table stay in clear
+# //// until the row is saved again. This patch moves them into `__Auth` (encrypted)
+# //// and leaves the usual mask in the column, so an install that has been running
+# //// for months ends up in the same state as a fresh one. It also repairs the
+# //// permission level on the instances that carry Custom DocPerm rows for these
+# //// doctypes — see grant_permlevel_access below. Idempotent: a value that is
+# //// already a mask is skipped, and a permission that exists is not added twice.
+# //// (drop once upstream PR bvisible/insights:security-hardening-2026-09 is merged)
 import frappe
 from frappe.utils.password import set_encrypted_password
 

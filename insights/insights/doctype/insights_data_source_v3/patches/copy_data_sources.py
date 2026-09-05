@@ -25,11 +25,11 @@ def execute():
                     "host": data_source_doc.host,
                     "port": data_source_doc.port,
                     "use_ssl": data_source_doc.use_ssl,
-                    #//// Neoffice — read through get_password(): the field is now a
-                    #//// Password on both doctypes, the raw column only holds a mask.
-                    #//// (this patch is disabled in patches.txt, kept correct anyway)
-                    #//// (drop once upstream PR the upstream PR from bvisible/insights branch
-#//// upstream/security-hardening-2026-09 is merged into frappe/insights)
+                    # //// Neoffice — read through get_password(): the field is now a
+                    # //// Password on both doctypes, the raw column only holds a mask.
+                    # //// (this patch is disabled in patches.txt, kept correct anyway)
+                    # //// (drop once upstream PR the upstream PR from bvisible/insights branch
+# //// upstream/security-hardening-2026-09 is merged into frappe/insights)
                     "connection_string": data_source_doc.get_password(
                         "connection_string", raise_exception=False
                     ),

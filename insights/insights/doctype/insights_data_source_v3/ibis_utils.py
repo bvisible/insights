@@ -23,10 +23,10 @@ from insights import create_toast
 from insights.cache_utils import make_digest
 from insights.insights.doctype.insights_table_v3.insights_table_v3 import (
     InsightsTablev3,
-    #//// Neoffice — added import, used by is_insights_table() at the bottom of this
-    #//// module (the CTE-shadowing guard of get_sql_tables_to_restrict).
-    #//// (drop once upstream PR the upstream PR from bvisible/insights branch
-#//// upstream/security-hardening-2026-09 is merged into frappe/insights)
+    # //// Neoffice — added import, used by is_insights_table() at the bottom of this
+    # //// module (the CTE-shadowing guard of get_sql_tables_to_restrict).
+    # //// (drop once upstream PR the upstream PR from bvisible/insights branch
+# //// upstream/security-hardening-2026-09 is merged into frappe/insights)
     get_table_name,
 )
 from insights.insights.query_builders.sql_functions import handle_timespan
@@ -514,19 +514,19 @@ class IbisQueryBuilder:
         if check_permissions:
             parsed = sg.parse_one(raw_sql, dialect=db.dialect)
 
-            #//// Neoffice — security fix, upstream defect (frappe/insights): this
-            #//// block used to collect the referenced tables, subtract the CTE
-            #//// aliases, and only then check permissions and build the restriction
-            #//// map. The caller writes both sides of that subtraction: naming a CTE
-            #//// after a real table ("WITH tabUser AS (SELECT * FROM tabUser) SELECT
-            #//// * FROM tabUser") emptied the set, so check_table_permission() was
-            #//// never reached and no restriction was ever prepended — the raw SQL
-            #//// went to the backend untouched. The logic now lives in
-            #//// get_sql_tables_to_restrict() at the bottom of this module, where the
-            #//// permission check runs on the tables the statement really references
-            #//// and a CTE shadowing a restricted table is refused.
-            #//// (drop once upstream PR the upstream PR from bvisible/insights branch
-#//// upstream/security-hardening-2026-09 is merged into frappe/insights)
+            # //// Neoffice — security fix, upstream defect (frappe/insights): this
+            # //// block used to collect the referenced tables, subtract the CTE
+            # //// aliases, and only then check permissions and build the restriction
+            # //// map. The caller writes both sides of that subtraction: naming a CTE
+            # //// after a real table ("WITH tabUser AS (SELECT * FROM tabUser) SELECT
+            # //// * FROM tabUser") emptied the set, so check_table_permission() was
+            # //// never reached and no restriction was ever prepended — the raw SQL
+            # //// went to the backend untouched. The logic now lives in
+            # //// get_sql_tables_to_restrict() at the bottom of this module, where the
+            # //// permission check runs on the tables the statement really references
+            # //// and a CTE shadowing a restricted table is refused.
+            # //// (drop once upstream PR the upstream PR from bvisible/insights branch
+# //// upstream/security-hardening-2026-09 is merged into frappe/insights)
             replace_map = get_sql_tables_to_restrict(data_source, parsed, db.dialect)
 
             with_clauses = []
@@ -916,23 +916,23 @@ def ensure_rollback():
         frappe.db.rollback(save_point=f"save_point_{hash}")
 
 
-#//// Neoffice — added, security fix, upstream defect (frappe/insights). Extracted
-#//// from apply_sql() so the guard can be tested on its own, and hardened on the way:
-#////   1. permissions are checked on the tables the statement really references,
-#////      BEFORE the CTE aliases are subtracted (upstream checked what was left of
-#////      the subtraction, which the caller controls);
-#////   2. a CTE named after a table that carries a restriction is refused — from
-#////      here on nothing can tell which of the two the engine will resolve, and the
-#////      author can always rename the CTE. Only a shadow that actually hides a
-#////      restriction is refused, so an unrestricted name stays usable as an alias.
-#//// is_insights_table() says whether a name is a table Insights knows about, i.e.
-#//// one that check_table_permission() and the table restrictions apply to.
-#//// get_restricted_table_sql() returns the SQL carrying those restrictions, or None
-#//// when there are none to enforce — the test upstream already performed inline
-#//// ("does the rewritten table have a WHERE clause"), factored out so the rewriting
-#//// and the shadow check answer the very same question.
-#//// (drop once upstream PR the upstream PR from bvisible/insights branch
-#//// upstream/security-hardening-2026-09 is merged into frappe/insights)
+# //// Neoffice — added, security fix, upstream defect (frappe/insights). Extracted
+# //// from apply_sql() so the guard can be tested on its own, and hardened on the way:
+# ////   1. permissions are checked on the tables the statement really references,
+# ////      BEFORE the CTE aliases are subtracted (upstream checked what was left of
+# ////      the subtraction, which the caller controls);
+# ////   2. a CTE named after a table that carries a restriction is refused — from
+# ////      here on nothing can tell which of the two the engine will resolve, and the
+# ////      author can always rename the CTE. Only a shadow that actually hides a
+# ////      restriction is refused, so an unrestricted name stays usable as an alias.
+# //// is_insights_table() says whether a name is a table Insights knows about, i.e.
+# //// one that check_table_permission() and the table restrictions apply to.
+# //// get_restricted_table_sql() returns the SQL carrying those restrictions, or None
+# //// when there are none to enforce — the test upstream already performed inline
+# //// ("does the rewritten table have a WHERE clause"), factored out so the rewriting
+# //// and the shadow check answer the very same question.
+# //// (drop once upstream PR the upstream PR from bvisible/insights branch
+# //// upstream/security-hardening-2026-09 is merged into frappe/insights)
 def is_insights_table(data_source: str, table_name: str) -> bool:
     return bool(frappe.db.exists("Insights Table v3", get_table_name(data_source, table_name)))
 

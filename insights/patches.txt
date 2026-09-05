@@ -46,22 +46,22 @@ insights.insights.doctype.insights_table.patches.sync_table_links
 insights.insights.doctype.insights_notebook_page.patches.replace_query_builder_with_editor
 insights.insights.doctype.insights_query.patches.set_chart_name
 insights.insights.doctype.insights_chart.patches.convert_bar_to_row_chart
-#//// Neoffice — these two upstream patches are DISABLED (commented out, not
-#//// deleted): copy_data_sources #v4 and force_sync_tables #5 both fail on our
-#//// already-populated installs (commit 24019840, "disable two problematic
-#//// migration patches that fail on existing installs"), and one failing patch
-#//// aborts the whole `bench migrate` — the fleet stops mid-migration. Keep
-#//// them commented until they are proven on a copy of a real instance.
+# //// Neoffice — these two upstream patches are DISABLED (commented out, not
+# //// deleted): copy_data_sources #v4 and force_sync_tables #5 both fail on our
+# //// already-populated installs (commit 24019840, "disable two problematic
+# //// migration patches that fail on existing installs"), and one failing patch
+# //// aborts the whole `bench migrate` — the fleet stops mid-migration. Keep
+# //// them commented until they are proven on a copy of a real instance.
 # insights.insights.doctype.insights_data_source_v3.patches.copy_data_sources #v4
 # insights.insights.doctype.insights_table_v3.patches.force_sync_tables #5
 insights.patches.enable_data_store
 insights.insights.doctype.insights_data_source_v3.patches.set_type
-#//// Neoffice — added entry, ships with the security fix that turned the data
-#//// source secrets (connection_string, bigquery_service_account_key) into
-#//// Password fields: the fieldtype only protects what is written afterwards, so
-#//// the values already in the table have to be moved into __Auth. The module is
-#//// committed with this line (a patch listed without its .py kills bench migrate
-#//// fleet-wide). Idempotent, safe to re-run.
-#//// (drop once upstream PR the upstream PR from bvisible/insights branch
-#//// upstream/security-hardening-2026-09 is merged into frappe/insights)
+# //// Neoffice — added entry, ships with the security fix that turned the data
+# //// source secrets (connection_string, bigquery_service_account_key) into
+# //// Password fields: the fieldtype only protects what is written afterwards, so
+# //// the values already in the table have to be moved into __Auth. The module is
+# //// committed with this line (a patch listed without its .py kills bench migrate
+# //// fleet-wide). Idempotent, safe to re-run.
+# //// (drop once upstream PR the upstream PR from bvisible/insights branch
+# //// upstream/security-hardening-2026-09 is merged into frappe/insights)
 insights.insights.doctype.insights_data_source_v3.patches.encrypt_data_source_secrets

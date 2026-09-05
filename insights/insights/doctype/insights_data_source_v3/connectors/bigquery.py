@@ -8,12 +8,12 @@ import ibis
 def get_bigquery_connection(data_source):
     project_id = data_source.bigquery_project_id
     dataset_id = data_source.bigquery_dataset_id
-    #//// Neoffice — read through get_password(): the service-account key is now a
-    #//// Password field (it is a private key, and any Insights User could read it
-    #//// from the table). get_password() returns the in-memory value for an unsaved
-    #//// document, so "Test connection" still works while creating the source.
-    #//// (drop once upstream PR the upstream PR from bvisible/insights branch
-#//// upstream/security-hardening-2026-09 is merged into frappe/insights)
+    # //// Neoffice — read through get_password(): the service-account key is now a
+    # //// Password field (it is a private key, and any Insights User could read it
+    # //// from the table). get_password() returns the in-memory value for an unsaved
+    # //// document, so "Test connection" still works while creating the source.
+    # //// (drop once upstream PR the upstream PR from bvisible/insights branch
+# //// upstream/security-hardening-2026-09 is merged into frappe/insights)
     credentials = data_source.get_password("bigquery_service_account_key", raise_exception=False)
 
     try:

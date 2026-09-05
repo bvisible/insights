@@ -1,7 +1,7 @@
-#//// Neoffice — added file (no upstream equivalent). One test per guard added by
-#//// the 2026-09-04 security pass on this fork; every test names the defect it
-#//// pins so a merge that loses the guard fails here instead of in production.
-#//// (drop once upstream PR https://github.com/frappe/insights/pull/PR_NUMBER is merged)
+# //// Neoffice — added file (no upstream equivalent). One test per guard added by
+# //// the 2026-09-04 security pass on this fork; every test names the defect it
+# //// pins so a merge that loses the guard fails here instead of in production.
+# //// (drop once upstream PR https://github.com/frappe/insights/pull/PR_NUMBER is merged)
 import json
 
 import frappe
