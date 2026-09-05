@@ -202,6 +202,8 @@ every test after it:
 | `insights/insights/query_builders/test_sql_builder.py` | imports `get_date_range` (removed) and builds `SQLQueryBuilder()` without the `engine` the v3 class requires |
 | `insights/insights/doctype/insights_data_source/test_insights_data_source.py` | needs a `sales` MariaDB with `demouser` on the runner and calls `create_parquet_file` / `get_db_table` (removed) |
 
+| `insights/tests/test_permissions.py` | at our base it is eight `pass` placeholders whose `setUp` inserts an `Insights Data Source v3` without the mandatory `title` and whose teardown deletes it by a name that is a hash — it could never run; the first failure leaves its users behind and the seven others die in `DuplicateEntryError`. `upstream/develop` **rewrote it entirely** (real tests on `insights/tests/base.py`, `factories.py`, `permissions_utils.py`, none of which exist here yet): take upstream's file at the merge |
+
 The v2 **code** stays (fleet data may still sit in v2 doctypes); only the tests went. Two v2 code
 defects were fixed instead of deleted, both marked: `FrappeTableFactory.get_table_columns`
 restored (`9f71b28c`) and the dead `build_ibis_query` import (cherry-pick of upstream `3baf7f84`).
