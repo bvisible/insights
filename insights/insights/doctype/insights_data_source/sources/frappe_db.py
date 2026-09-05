@@ -55,6 +55,17 @@ class FrappeTableFactory:
             schema.setdefault(table_name, []).append(self.get_column(column_name, data_type))
         return schema
 
+    # //// Neoffice — added. The v3 side-by-side refactor (upstream 6ea19d21,
+    # //// 2024-06) dropped this method, but the v2 path still calls it:
+    # //// FrappeDB.get_table_columns -> table_factory.get_table_columns, reached by
+    # //// InsightsTable.on_update -> update_columns for any v2 "Insights Table"
+    # //// saved without columns (upstream's own test records do exactly that).
+    # //// Every save on that path died in an AttributeError. Same column shape
+    # //// as get_columns_by_tables; upstream develop has since removed the whole
+    # //// v2 source, so there is nothing to send upstream.
+    def get_table_columns(self, table):
+        return self.get_columns_by_tables([table]).get(table, [])
+
     def get_table(self, table_name):
         return _dict(
             {
