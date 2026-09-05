@@ -43,6 +43,9 @@ class TestInsightsSecurity(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        # //// Neoffice — setUpClass now forces Administrator before creating test users
+        # //// Neoffice — (40b0b50d "test: drop three dead v2 test modules, harden the security suite setup"):
+        # //// Neoffice — a failing test after frappe.set_user() used to leak a rolled-back user into the run
         # A test that fails after frappe.set_user() leaks that user into the whole
         # run; the users below must be created by Administrator whatever ran before.
         frappe.set_user("Administrator")
