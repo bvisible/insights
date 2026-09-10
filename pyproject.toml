@@ -12,7 +12,21 @@ dependencies = [
     "SQLAlchemy==2.0.41",
     "python-telegram-bot==21.4",
     "duckdb~=1.4.3",
-    "sqlglot<28.0.0",
+    # //// Neoffice — aligned on upstream insights (version-3), which pins the same
+    # //// window with the SAME ibis (`ibis-framework~=11.0.0`).
+    # //// The `<28.0.0` ceiling came from upstream itself (2aec0b33, 2025-11-19) to
+    # //// dodge ibis-project/ibis#11767: sqlglot 28 renamed `Star(except=…)` to
+    # //// `except_`, and ibis silently dropped the EXCLUDE clause, so a `.drop()`
+    # //// stopped excluding the column. That issue is CLOSED (ibis PR #11805) and
+    # //// upstream replaced the ceiling with this floor.
+    # ////
+    # //// Why it matters here: upstream frappe pins `sql_metadata~=3.0.1`, whose
+    # //// 3.x requires `sqlglot>=30.12,<31`. Held under 28, the two are mutually
+    # //// unsatisfiable and the upstream-preview CI dies at import with
+    # //// `No module named sqlglot.parsers` (neoffice-maintenance#261, #138).
+    # //// Our own frappe pins `sql_metadata~=2.11.0`, which uses sqlparse and asks
+    # //// nothing of sqlglot — so the normal CI is unaffected either way.
+    "sqlglot>=30.12.0,<30.18",
     "ibis-framework~=11.0.0",
     "ibis-framework[duckdb]",
     "ibis-framework[mysql]",
