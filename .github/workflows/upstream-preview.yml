@@ -16,5 +16,11 @@ jobs:
     with:
       app: insights
       skip_build: true
+      # Mirrors tests.yml. The preview must differ from the normal CI in ONE thing --
+      # which frappe/erpnext it builds against -- or it measures its own gaps instead
+      # of the upgrade. Without this, `bundled_asset` gets None from an unbuilt asset
+      # manifest and every test that renders an email dies on
+      # `'NoneType' object has no attribute 'get'` (neoffice-maintenance#261).
+      build_frappe_assets: true
       upstream_preview: true
     secrets: inherit
