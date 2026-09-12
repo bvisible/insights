@@ -65,3 +65,6 @@ insights.insights.doctype.insights_data_source_v3.patches.set_type
 # //// (drop once upstream PR the upstream PR from bvisible/insights branch
 # //// upstream/security-hardening-2026-09 is merged into frappe/insights)
 insights.insights.doctype.insights_data_source_v3.patches.encrypt_data_source_secrets
+# //// Neoffice — stale Admin team members and the admins they kept out
+# //// (neoffice-maintenance#372). Module committed with this line.
+insights.patches.remove_team_members_without_user

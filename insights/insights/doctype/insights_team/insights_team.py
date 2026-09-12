@@ -156,6 +156,19 @@ def update_admin_team(user, method=None):
             )
         if is_admin and user.name not in admin_team_members():
             team = frappe.get_cached_doc("Insights Team", "Admin")
+            # //// Neoffice — drop members whose User no longer exists before saving. Frappe
+            # //// validates links before validate(), so one stale member (a user removed
+            # //// outside Frappe's delete) made every save of the Admin team fail with a
+            # //// LinkValidationError: the new Insights Admin was never added, and the
+            # //// error came back at each role change (neoffice-maintenance#372).
+            team.team_members = [m for m in team.team_members if frappe.db.exists("User", m.user)]
+            # //// Put back the Insights Admins an earlier failed save left out: this save runs
+            # //// set_admin_roles(), which would otherwise STRIP the role from every holder
+            # //// that is not a member of the team.
+            members = {m.user for m in team.team_members}
+            for admin in get_users_with_role("Insights Admin"):
+                if admin not in members and admin != user.name:
+                    team.append("team_members", {"user": admin})
             team.append("team_members", {"user": user.name})
             team.save(ignore_permissions=True)
 
