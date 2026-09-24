@@ -177,7 +177,14 @@ class TestInsightsSecurity(FrappeTestCase):
         )
         mine.insert(ignore_permissions=True)
         frappe.db.set_value("Insights Query v3", mine.name, "owner", TEST_USER)
-        frappe.db.set_value("Insights Query v3", mine.name, "linked_queries", json.dumps([secret.name]))
+        # a query depends on another through a `source` operation that names it
+        # (upstream dropped the `linked_queries` column for this at the version-3 merge)
+        frappe.db.set_value(
+            "Insights Query v3",
+            mine.name,
+            "operations",
+            json.dumps([{"type": "source", "table": {"type": "query", "query_name": secret.name}}]),
+        )
         frappe.db.set_value("Insights Workbook", workbook.name, "owner", TEST_USER)
 
         frappe.set_user(TEST_USER)
