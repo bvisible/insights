@@ -144,6 +144,27 @@ class IbisQueryBuilder:
         self.operations = doc.operations
         self.set_operations()
 
+    # //// Neoffice — added property. Upstream sends a query whose use_live_connection
+    # //// is off to the DuckDB data store even on a site that never enabled the data
+    # //// store: builder queries import their tables into it on first use, and since
+    # //// 55afbd6f (in version-3 since the 2026-09-24 merge) native SQL queries are
+    # //// transpiled to DuckDB as well. The editor creates every query live, so only
+    # //// queries created programmatically (assistant tools, scripts) carry the doctype
+    # //// default 0; on osiris 58 native queries broke at the merge, MariaDB SQL not
+    # //// being DuckDB SQL (non-aggregated GROUP BY columns, a DATE compared with a
+    # //// string). A site whose data store is off reads its sources live, which is what
+    # //// the setting says. Upstream's assignments to the attribute are untouched.
+    # //// Drop once upstream gates the data store on enable_data_store itself.
+    @property
+    def use_live_connection(self):
+        return self._use_live_connection or not frappe.db.get_single_value(
+            "Insights Settings", "enable_data_store", cache=True
+        )
+
+    @use_live_connection.setter
+    def use_live_connection(self, value):
+        self._use_live_connection = bool(value)
+
     def set_operations(self):
         operations = frappe.parse_json(self.operations)
         adhoc_filters_by_query = getattr(frappe.local, "insights_adhoc_filters", None) or {}
