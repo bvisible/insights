@@ -1744,7 +1744,7 @@ msgstr "À partir d'un modèle"
 #: frontend/src2/helpers/constants.ts:57
 #: insights/insights/doctype/insights_table_v3/insights_table_v3.json
 msgid "Full"
-msgstr "Plein"
+msgstr "Complet"
 
 #: frontend/src2/settings/GeneralSettings.vue:41
 #: frontend/src2/settings/Settings.vue:38
@@ -2464,7 +2464,7 @@ msgstr "Dernière valeur du curseur de synchronisation (définie automatiquement
 #: frontend/src2/charts/components/SankeyChartConfigForm.vue:70
 #: frontend/src2/helpers/constants.ts:44
 msgid "Left"
-msgstr "Parti"
+msgstr "Gauche"
 
 #. Label of a Data field in DocType 'Insights Table Link v3'
 #: frontend/src2/query/components/JoinSelectorDialog.vue:280
@@ -3357,7 +3357,7 @@ msgstr "Vérifier la migration"
 #: frontend/src2/charts/components/SankeyChartConfigForm.vue:71
 #: frontend/src2/helpers/constants.ts:50
 msgid "Right"
-msgstr "Droit"
+msgstr "Droite"
 
 #. Label of a Data field in DocType 'Insights Table Link v3'
 #: frontend/src2/query/components/JoinSelectorDialog.vue:294
