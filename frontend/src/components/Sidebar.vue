@@ -56,6 +56,33 @@
 			</div>
 
 			<div class="mt-auto flex flex-col items-center gap-2 text-base text-gray-600">
+				<Tooltip placement="right" :hoverDelay="0.1">
+					<template #body>
+						<div
+							class="w-fit rounded border border-gray-100 bg-gray-800 px-2 py-1 text-xs text-white shadow-xl"
+						>
+							{{
+								dashboardsWaiting
+									? 'v2 is being discontinued. Move your dashboards to v3.'
+									: 'v2 is being discontinued'
+							}}
+						</div>
+					</template>
+					<Button
+						variant="ghost"
+						class="relative !text-amber-700 hover:!bg-amber-50"
+						@click="showSwitchToV3Dialog = true"
+					>
+						<AlertTriangle class="h-4" />
+						<!-- The rail is 56px wide and carries icons only, so the count
+						 cannot be written out. A dot says there is something to do,
+						 which the plain warning icon does not. -->
+						<span
+							v-if="dashboardsWaiting"
+							class="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-amber-600"
+						/>
+					</Button>
+				</Tooltip>
 				<Button variant="ghost" @click="open('https://docs.frappeinsights.com')">
 					<BookOpen class="h-4 text-gray-600" />
 				</Button>
@@ -85,7 +112,7 @@
 							  }
 							: null,
 						{
-							label: 'Switch to Insights v3',
+							label: 'Open Insights v3',
 							icon: 'grid',
 							onClick: () => (showSwitchToV3Dialog = true),
 						},
@@ -119,38 +146,38 @@
 		</div>
 	</div>
 
-	<HelpDialog v-model="showHelpDialog" />
-
 	<Dialog
 		v-model="showSwitchToV3Dialog"
-		:options="{
-			title: 'Insights v3 ✨',
-			actions: [
-				{
-					label: 'Continue',
-					variant: 'solid',
-					onClick: openInsightsV3,
-				},
-			],
-		}"
+		:options="{ title: 'Insights v2 is being discontinued', actions: switchActions }"
 	>
 		<template #body-content>
-			<div class="prose prose-sm mb-4">
+			<div class="space-y-3 text-sm leading-relaxed text-gray-700">
 				<p>
-					Switch to the newest version of Insights, built from the ground up for a better
-					experience.
+					You are using Insights v2. Insights v3 has replaced it, and this interface will
+					be removed in a future release.
 				</p>
-				<p>
-					You can always switch back to this version by clicking the "Switch to Insights
-					v2" button in the new version.
+				<p v-if="dashboardsWaiting && canMigrate">
+					Insights v3 can bring your dashboards over for you. It converts each dashboard
+					and then checks that the numbers match v2. You choose which ones to move, and
+					nothing is converted until you say so.
+					<strong>{{ dashboardsWaiting }}</strong>
+					{{ dashboardsWaiting === 1 ? 'dashboard is' : 'dashboards are' }} waiting to
+					move.
 				</p>
+				<p v-else-if="dashboardsWaiting">
+					Insights v3 can bring your dashboards over for you. Ask an Insights
+					administrator to run the migration.
+				</p>
+				<p>Your work in v2 stays untouched.</p>
 			</div>
-			<FormControl
-				type="checkbox"
-				label="Set Insights v3 as default"
-				:modelValue="session.user.default_version === 'v3'"
-				@update:modelValue="session.user.default_version = $event ? 'v3' : ''"
-			/>
+			<div class="mt-4">
+				<FormControl
+					type="checkbox"
+					label="Always open Insights v3 by default"
+					:modelValue="session.user.default_version === 'v3'"
+					@update:modelValue="session.user.default_version = $event ? 'v3' : ''"
+				/>
+			</div>
 		</template>
 	</Dialog>
 </template>
@@ -158,10 +185,11 @@
 <script setup>
 import { Avatar } from 'frappe-ui'
 
-import HelpDialog from '@/components/HelpDialog.vue'
 import sessionStore from '@/stores/sessionStore'
+import { MIGRATION_URL, openInsightsV3, useV2MigrationNudge } from '@/utils/v2migration'
 import settingsStore from '@/stores/settingsStore'
 import {
+	AlertTriangle,
 	Book,
 	BookOpen,
 	Database,
@@ -236,16 +264,24 @@ const currentRoute = computed(() => {
 
 const open = (url) => window.open(url, '_blank')
 
-function openInsightsV3() {
-	session
-		.updateDefaultVersion(
-			// if default version is v2, then /insights always redirects to /insights_v2
-			// so it is not possible to switch to v3 from v2
-			// so we need to remove the default_version
-			session.user.default_version === 'v2' ? '' : session.user.default_version
-		)
-		.then(() => {
-			window.location.href = '/insights'
+const { waiting: dashboardsWaiting, canMigrate } = useV2MigrationNudge()
+
+const switchActions = computed(() => {
+	const offerMigration = dashboardsWaiting.value && canMigrate.value
+	const actions = [
+		{
+			label: 'Open Insights v3',
+			variant: offerMigration ? 'subtle' : 'solid',
+			onClick: () => openInsightsV3(),
+		},
+	]
+	if (offerMigration) {
+		actions.unshift({
+			label: 'Review migration',
+			variant: 'solid',
+			onClick: () => openInsightsV3(MIGRATION_URL),
 		})
-}
+	}
+	return actions
+})
 </script>

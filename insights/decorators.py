@@ -1,7 +1,6 @@
 # Copyright (c) 2022, Frappe Technologies Pvt. Ltd. and Contributors
 # See license.txt
 
-import inspect
 import threading
 from functools import wraps
 
@@ -10,27 +9,25 @@ import frappe
 from insights.insights.doctype.insights_team.insights_team import is_admin
 
 
+def has_role(role, user=None):
+    """Whether `user` clears the gate `check_role(role)` keeps.
+
+    Exported so a caller that only wants the answer - a UI asking whether to
+    offer a button - reads the same rule the endpoint enforces.
+    """
+    user = user or frappe.session.user
+    if user == "Administrator":
+        return True
+    if role in frappe.get_roles(user):
+        return True
+    return role == "Insights User" and is_admin(user)
+
+
 def check_role(role):
     def decorator(function):
         @wraps(function)
         def wrapper(*args, **kwargs):
-
-            perm_disabled = not frappe.db.get_single_value(
-                "Insights Settings", "enable_permissions"
-            )
-            if perm_disabled and role in ["Insights Admin", "Insights User"]:
-                return function(*args, **kwargs)
-
-            has_required_role = frappe.db.get_value(
-                "Has Role",
-                {"parent": frappe.session.user, "role": role},
-                cache=not frappe.flags.in_test,
-            )
-
-            if role == "Insights User" and is_admin(frappe.session.user):
-                has_required_role = True
-
-            if not has_required_role:
+            if not has_role(role):
                 frappe.throw(
                     frappe._("You do not have permission to access this resource"),
                     frappe.PermissionError,
@@ -125,50 +122,30 @@ def debounce(wait):
     return decorator
 
 
-def validate_type(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        sig = inspect.signature(func)
-        annotated_types = {
-            k: v.annotation
-            for k, v in sig.parameters.items()
-            if v.annotation != inspect._empty
-        }
-        bound_args = sig.bind(*args, **kwargs)
-        bound_args.apply_defaults()
-        for arg_name, arg_value in bound_args.arguments.items():
-            if (
-                arg_name in annotated_types
-                and arg_value is not None
-                and not isinstance(arg_value, annotated_types[arg_name])
-            ):
-                raise TypeError(
-                    f"{func.__name__}: Argument {arg_name} must be of type {annotated_types[arg_name]}"
-                )
-        return func(*args, **kwargs)
-
-    return wrapper
-
-
-def insights_whitelist(*args, **kwargs):
+def insights_whitelist(*args, role="Insights User", **kwargs):
     # usage:
     # @insights_whitelist()
     # def my_function():
     #     pass
     #
+    # @insights_whitelist(role="Insights Admin")
+    # def admin_function():
+    #     pass
+    #
     # what it does:
     # @frappe.whitelist()
-    # @check_role("Insights User")
+    # @check_role(role)
     # def my_function():
     #     pass
 
     def decorator(function):
-        @wraps(function)
-        @frappe.whitelist(*args, **kwargs)
-        @check_role("Insights User")
-        def wrapper(*args, **kwargs):
-            return function(*args, **kwargs)
-
-        return wrapper
+        # frappe.whitelist checks the argument types of the function it decorates:
+        # it reads the annotations off that function, and names its positional
+        # arguments through its __code__. A `*args` wrapper carries neither, so
+        # frappe must decorate `function` itself for the checks to run at all.
+        validated = frappe.whitelist(*args, **kwargs)(function)
+        # the second call whitelists the role check, which is what the module
+        # exports and what the request dispatcher looks up.
+        return frappe.whitelist(*args, **kwargs)(check_role(role)(validated))
 
     return decorator

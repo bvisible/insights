@@ -35,8 +35,9 @@ export const COLOR_MAP = {
 // https://10015.io/tools/color-shades-generator
 export const GRADIENT_COLORS = {
 	//// Neoffice — the single GRADIENT_COLORS ramp goes from blue to clay, and its
-	//// key with it (`blue` -> `clay`). Its only caller is getFunnelChartOptions in
-	//// charts/helpers.ts: rename both sides together or the funnel gets undefined.
+	//// key with it (`blue` -> `clay`). Nothing reads it since the 2026-09-24 merge:
+	//// upstream's funnel now computes its own HSL ramp, re-hued to clay in
+	//// charts/helpers.ts. A future caller asking for `blue` would get undefined.
 	// clay ramp (was a blue ramp) — single-colour gradients follow the DS accent
 	clay: ['#c2723f', '#cd8254', '#d6926a', '#dea27f', '#e5b194', '#ebc1aa', '#f1d1c0', '#f6e0d6', '#fbefe9', '#ffffff'],
 }

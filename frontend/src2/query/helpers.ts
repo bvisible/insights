@@ -1,3 +1,4 @@
+import { __ } from '../translation'
 import {
 	ArrowUpDown,
 	BetweenHorizonalStart,
@@ -17,8 +18,9 @@ import {
 } from 'lucide-vue-next'
 import { h } from 'vue'
 import { copy } from '../helpers'
-import { FIELDTYPES, GranularityType } from '../helpers/constants'
+import { FIELDTYPES, getDefaultGranularity, GranularityType } from '../helpers/constants'
 import dayjs from '../helpers/dayjs'
+import useSettings from '../settings/settings'
 import {
 	Cast,
 	CastArgs,
@@ -61,6 +63,8 @@ import {
 	SourceArgs,
 	SQL,
 	SQLArgs,
+	SQLColumn,
+	SQLColumnArgs,
 	Summarize,
 	SummarizeArgs,
 	Table,
@@ -68,6 +72,7 @@ import {
 	Union,
 	UnionArgs,
 } from '../types/query.types'
+import session from '../session'
 
 export const table = (args: Partial<TableArgs>): Table => ({
 	type: 'table',
@@ -96,6 +101,16 @@ export const expression = (expression: string): Expression => ({
 	type: 'expression',
 	expression,
 })
+
+// the server's summarize carries a money measure's currency code under this name;
+// `CARRIED_CURRENCY_SUFFIX` in ibis_utils.py must match
+export const currencyColumnName = (measure_name: string) => `${measure_name}__currency`
+
+// `undefined`: the measure names no column. `null`: the row mixes currencies.
+export function getRowCurrency(row: any, measure_name: string): string | null | undefined {
+	const key = currencyColumnName(measure_name)
+	return key in (row || {}) ? (row[key] ?? null) : undefined
+}
 
 // export const window_operation = (options: WindowOperationArgs): WindowOperation => ({
 // 	type: 'window_operation',
@@ -129,7 +144,11 @@ export function getFormattedRows(result: QueryResult, operations: Operation[]) {
 				formattedRow[column.name] = getFormattedDate(row[column.name], granularity)
 			}
 
-			if (FIELDTYPES.TEXT.includes(column.type) && typeof row[column.name] === 'string' && row[column.name]) {
+			if (
+				FIELDTYPES.TEXT.includes(column.type) &&
+				typeof row[column.name] === 'string' &&
+				row[column.name]
+			) {
 				const htmlTagRegex = /<[^>]*>/g
 				if (htmlTagRegex.test(row[column.name])) {
 					htmlTagRegex.lastIndex = 0
@@ -144,11 +163,37 @@ export function getFormattedRows(result: QueryResult, operations: Operation[]) {
 	})
 	return formattedRows
 }
-
-export function getFormattedDate(date: string, granularity: GranularityType) {
+export function getFormattedDate(date: string, granularity: string) {
 	if (!date) return ''
 
-	const dayjsFormat: Record<GranularityType, string> = {
+	const isTimeOnlyValue = /^\d{1,2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(date)
+	if (isTimeOnlyValue) {
+		const timeFormats: Record<string, string> = {
+			second: 'h:mm:ss A',
+			minute: 'h:mm A',
+			hour: 'h:00 A',
+		}
+
+		if (!timeFormats[granularity]) return date
+
+		const parsed = dayjs(date, ['HH:mm:ss.SSSSSS', 'HH:mm:ss', 'HH:mm'], true)
+		return parsed.isValid() ? parsed.format(timeFormats[granularity]) : date
+	}
+
+	if (granularity === 'fiscal_year') {
+		const d = dayjs(date)
+		const fiscalYearStart = session.user.fiscal_year_start
+		const fiscalStartMonth = dayjs(fiscalYearStart).month()
+		const fiscalStartDay = dayjs(fiscalYearStart).date()
+
+		const fiscalStartThisYear = d.month(fiscalStartMonth).date(fiscalStartDay)
+		const startYear = d.isBefore(fiscalStartThisYear) ? d.year() - 1 : d.year()
+		const endYear = startYear + 1
+
+		return `FY ${startYear}-${String(endYear).slice(-2)}`
+	}
+
+	const dayjsFormat: Record<string, string> = {
 		second: 'MMMM D, YYYY h:mm:ss A',
 		minute: 'MMMM D, YYYY h:mm A',
 		hour: 'MMMM D, YYYY h:00 A',
@@ -187,18 +232,17 @@ export function getDimensions(columns: QueryResultColumn[]): Dimension[] {
 }
 
 export function makeDimension(column: QueryResultColumn): Dimension {
-	const isDate = FIELDTYPES.DATE.includes(column.type)
 	return {
 		column_name: column.name,
 		data_type: column.type as DimensionDataType,
-		granularity: isDate ? 'month' : undefined,
+		granularity: getDefaultGranularity(column.type),
 		dimension_name: column.name,
 	}
 }
 
 export const query_operation_types = {
 	source: {
-		label: 'Source',
+		label: __('Source'),
 		type: 'source',
 		icon: DatabaseZap,
 		color: 'gray',
@@ -209,7 +253,7 @@ export const query_operation_types = {
 		},
 	},
 	join: {
-		label: 'Join',
+		label: __('Join'),
 		type: 'join',
 		icon: h(BlendIcon, { class: '-rotate-45' }),
 		color: 'gray',
@@ -220,7 +264,7 @@ export const query_operation_types = {
 		},
 	},
 	union: {
-		label: 'Union',
+		label: __('Union'),
 		type: 'union',
 		icon: BetweenHorizonalStart,
 		color: 'gray',
@@ -231,7 +275,7 @@ export const query_operation_types = {
 		},
 	},
 	select: {
-		label: 'Select',
+		label: __('Select'),
 		type: 'select',
 		icon: ColumnsIcon,
 		color: 'gray',
@@ -242,7 +286,7 @@ export const query_operation_types = {
 		},
 	},
 	remove: {
-		label: 'Remove',
+		label: __('Remove'),
 		type: 'remove',
 		icon: XSquareIcon,
 		color: 'gray',
@@ -256,7 +300,7 @@ export const query_operation_types = {
 		},
 	},
 	rename: {
-		label: 'Rename',
+		label: __('Rename'),
 		type: 'rename',
 		icon: TextCursorInput,
 		color: 'gray',
@@ -267,7 +311,7 @@ export const query_operation_types = {
 		},
 	},
 	cast: {
-		label: 'Cast',
+		label: __('Cast'),
 		type: 'cast',
 		icon: Repeat,
 		color: 'gray',
@@ -278,7 +322,7 @@ export const query_operation_types = {
 		},
 	},
 	filter: {
-		label: 'Filter',
+		label: __('Filter'),
 		type: 'filter',
 		icon: FilterIcon,
 		color: 'gray',
@@ -286,22 +330,22 @@ export const query_operation_types = {
 		init: (args: FilterArgs): Filter => ({ type: 'filter', ...args }),
 		getDescription: (op: Filter) => {
 			// @ts-ignore
-			if (op.expression) return `custom expression`
+			if (op.expression) return __('custom expression')
 			// @ts-ignore
 			return `${op.column.column_name}`
 		},
 	},
 	filter_group: {
-		label: 'Filter Group',
+		label: __('Filter Group'),
 		type: 'filter_group',
 		icon: FilterIcon,
 		color: 'gray',
 		class: 'text-gray-600 bg-gray-100',
 		init: (args: FilterGroupArgs): FilterGroup => ({ type: 'filter_group', ...args }),
 		getDescription: (op: FilterGroup) => {
-			if (!op.filters.length) return 'empty'
+			if (!op.filters.length) return __('empty')
 			const columns = op.filters.map((f) => {
-				if ('expression' in f) return 'custom expression'
+				if ('expression' in f) return __('custom expression')
 				return f.column.column_name
 			})
 			const more = columns.length - 2
@@ -309,7 +353,7 @@ export const query_operation_types = {
 		},
 	},
 	mutate: {
-		label: 'Calculate',
+		label: __('Calculate'),
 		type: 'mutate',
 		icon: FunctionSquare,
 		color: 'gray',
@@ -319,8 +363,20 @@ export const query_operation_types = {
 			return `${op.new_name}`
 		},
 	},
+	// No popover entry: the v2 migrator is the only writer.
+	sql_column: {
+		label: __('SQL column (from v2)'),
+		type: 'sql_column',
+		icon: ScrollText,
+		color: 'gray',
+		class: 'text-gray-600 bg-gray-100',
+		init: (args: SQLColumnArgs): SQLColumn => ({ type: 'sql_column', ...args }),
+		getDescription: (op: SQLColumn) => {
+			return `${op.new_name}`
+		},
+	},
 	summarize: {
-		label: 'Summarize',
+		label: __('Summarize'),
 		type: 'summarize',
 		icon: Combine,
 		color: 'gray',
@@ -329,22 +385,22 @@ export const query_operation_types = {
 		getDescription: (op: Summarize) => {
 			const measures = op.measures.map((m) => m.measure_name).join(', ')
 			const dimensions = op.dimensions.map((g) => g.column_name).join(', ')
-			return `${measures} BY ${dimensions}`
+			return __(`{0} BY {1}`, measures, dimensions)
 		},
 	},
 	pivot_wider: {
-		label: 'Pivot',
+		label: __('Pivot'),
 		type: 'pivot_wider',
 		icon: GitBranch,
 		color: 'gray',
 		class: 'text-gray-600 bg-gray-100',
 		init: (args: PivotWiderArgs): PivotWider => ({ type: 'pivot_wider', ...args }),
 		getDescription: (op: PivotWider) => {
-			return 'Pivot Wider'
+			return __('Pivot Wider')
 		},
 	},
 	order_by: {
-		label: 'Sort',
+		label: __('Sort'),
 		type: 'order_by',
 		icon: ArrowUpDown,
 		color: 'gray',
@@ -355,7 +411,7 @@ export const query_operation_types = {
 		},
 	},
 	limit: {
-		label: 'Limit',
+		label: __('Limit'),
 		type: 'limit',
 		icon: Indent,
 		color: 'gray',
@@ -366,36 +422,39 @@ export const query_operation_types = {
 		},
 	},
 	custom_operation: {
-		label: 'Custom Operation',
+		label: __('Custom Operation'),
 		type: 'custom_operation',
 		icon: Braces,
 		color: 'gray',
 		class: 'text-gray-600 bg-gray-100',
-		init: (args: CustomOperationArgs): CustomOperation => ({ type: 'custom_operation', ...args }),
+		init: (args: CustomOperationArgs): CustomOperation => ({
+			type: 'custom_operation',
+			...args,
+		}),
 		getDescription: (op: CustomOperation) => {
 			return `${op.expression.expression}`
 		},
 	},
 	sql: {
-		label: 'SQL',
+		label: __('SQL'),
 		type: 'sql',
 		icon: ScrollText,
 		color: 'gray',
 		class: 'text-gray-600 bg-gray-100',
 		init: (args: SQLArgs): SQL => ({ type: 'sql', ...args }),
 		getDescription: (op: SQL) => {
-			return "SQL"
+			return __('SQL')
 		},
 	},
 	code: {
-		label: 'Code',
+		label: __('Code'),
 		type: 'code',
 		icon: Braces,
 		color: 'gray',
 		class: 'text-gray-600 bg-gray-100',
 		init: (args: CodeArgs): Code => ({ type: 'code', ...args }),
 		getDescription: (op: Code) => {
-			return "Code"
+			return __('Code')
 		},
 	},
 }
@@ -410,6 +469,7 @@ export const cast = query_operation_types.cast.init
 export const filter = query_operation_types.filter.init
 export const filter_group = query_operation_types.filter_group.init
 export const mutate = query_operation_types.mutate.init
+export const sql_column = query_operation_types.sql_column.init
 export const summarize = query_operation_types.summarize.init
 export const pivot_wider = query_operation_types.pivot_wider.init
 export const order_by = query_operation_types.order_by.init
@@ -417,3 +477,59 @@ export const limit = query_operation_types.limit.init
 export const custom_operation = query_operation_types.custom_operation.init
 export const sql = query_operation_types.sql.init
 export const code = query_operation_types.code.init
+
+// ─── Inline column filter utilities ──────────────────────────────────────────
+
+// Operators checked longest-first so ">=" is not mistaken for ">"
+const NUMERIC_OPERATORS = ['>=', '<=', '!=', '>', '<', '='] as const
+export type NumericOperator = (typeof NUMERIC_OPERATORS)[number]
+
+export type ParsedFilter =
+	| { kind: 'numeric'; operator: NumericOperator; num: number }
+	| { kind: 'text'; text: string }
+
+/**
+ * Parse a raw filter string (e.g. ">= 100", "foo") into a structured form.
+ * Returns null when the string is empty or the numeric part cannot be parsed.
+ */
+export function parseFilterString(filterStr: string): ParsedFilter | null {
+	if (!filterStr) return null
+
+	const op = NUMERIC_OPERATORS.find((o) => filterStr.startsWith(o))
+	if (op) {
+		const rest = filterStr.slice(op.length).trim()
+		const num = Number(rest)
+		if (rest === '' || isNaN(num)) return null
+		return { kind: 'numeric', operator: op, num }
+	}
+
+	return { kind: 'text', text: filterStr }
+}
+
+/**
+ * Test whether a single cell value matches a parsed filter.
+ * Used for client-side (in-memory) filtering.
+ */
+export function matchesFilter(value: any, parsed: ParsedFilter): boolean {
+	if (parsed.kind === 'numeric') {
+		const num = Number(value)
+		switch (parsed.operator) {
+			case '>':
+				return num > parsed.num
+			case '<':
+				return num < parsed.num
+			case '>=':
+				return num >= parsed.num
+			case '<=':
+				return num <= parsed.num
+			case '=':
+				return num === parsed.num
+			case '!=':
+				return num !== parsed.num
+		}
+	}
+	// text: case-insensitive substring match
+	return String(value ?? '')
+		.toLowerCase()
+		.includes(parsed.text.toLowerCase())
+}

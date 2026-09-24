@@ -1,11 +1,38 @@
 <script setup lang="ts">
-import Checkbox from '../components/Checkbox.vue'
+import { call } from 'frappe-ui'
+import { __ } from '../translation'
+import { ref } from 'vue'
+import { createToast } from '../helpers/toasts'
 import DatePickerControl from '../query/components/DatePickerControl.vue'
+import session from '../session'
 import SettingItem from './SettingItem.vue'
 import useSettings from './settings'
 
 const settings = useSettings()
 settings.load()
+
+const demoLoading = ref(false)
+
+async function setupDemoData() {
+	demoLoading.value = true
+	try {
+		await call('insights.setup.setup_wizard.setup_demo_data')
+		session.user.has_demo_data = true
+		createToast({
+			title: __('Demo Data Ready'),
+			message: __('Sample data and workbook have been set up successfully'),
+			variant: 'success',
+		})
+	} catch {
+		createToast({
+			title: __('Setup Failed'),
+			message: __('Failed to setup demo data'),
+			variant: 'error',
+		})
+	} finally {
+		demoLoading.value = false
+	}
+}
 </script>
 
 <template>
@@ -41,19 +68,31 @@ settings.load()
 			:label="__('Week Starts On')"
 			:description="__('Set the start of the week for the organization. This will be used to calculate weekly data.')"
 		>
+			<!-- //// Neoffice — the weekday options carry a translated label; the stored value stays English. -->
 			<FormControl
 				class="w-28"
 				type="select"
 				v-model="settings.doc.week_starts_on"
-				:options="[
-					'Sunday',
-					'Monday',
-					'Tuesday',
-					'Wednesday',
-					'Thursday',
-					'Friday',
-					'Saturday',
-				]"
+				:options="
+					['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(
+						(day) => ({ label: __(day), value: day })
+					)
+				"
+			/>
+		</SettingItem>
+
+		<!-- //// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French -->
+		<SettingItem
+			v-if="session.user.is_admin && !session.user.has_demo_data"
+			:label="__('Demo Data')"
+			:description="__('Set up sample data and a pre-built workbook to explore Insights features.')"
+		>
+			<Button
+				variant="subtle"
+				size="sm"
+				:label="__('Setup Demo Data')"
+				:loading="demoLoading"
+				@click="setupDemoData"
 			/>
 		</SettingItem>
 

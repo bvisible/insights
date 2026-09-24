@@ -2,9 +2,13 @@
 import { computed, reactive } from 'vue'
 import { copy } from '../helpers'
 import { FilterType } from '../helpers/constants'
+import { DatePicker, DateRangePicker } from 'frappe-ui'
 import ColumnFilterValueSelector from '../query/components/ColumnFilterValueSelector.vue'
-import DatePicker from '../query/components/DatePicker.vue'
-import { getOperatorOptions, getValueSelectorType } from '../query/components/filter_utils'
+import {
+	getOperatorOptions,
+	getValueSelectorType,
+	normalizeDateRange,
+} from '../query/components/filter_utils'
 import NumberFilterPicker from '../query/components/NumberFilterPicker.vue'
 import RelativeDatePicker from '../query/components/RelativeDatePicker.vue'
 import { FilterOperator, FilterValue } from '../types/query.types'
@@ -15,6 +19,7 @@ const props = defineProps<{
 }>()
 const filterOperator = defineModel<FilterOperator>('operator')
 const filterValue = defineModel<FilterValue>('value')
+const emit = defineEmits<{ close: [] }>()
 
 const operatorOptions = computed(() => {
 	return getOperatorOptions(props.filterType)
@@ -24,7 +29,7 @@ const state = reactive(
 	copy({
 		operator: filterOperator.value || operatorOptions.value[0].value,
 		value: filterValue.value,
-	})
+	}),
 )
 
 const valueSelectorType = computed(() => {
@@ -43,11 +48,21 @@ function onOperatorChange(operator: FilterOperator) {
 function applyFilter() {
 	filterOperator.value = state.operator
 	filterValue.value = state.value
+	emit('close')
 }
 function clearFilter() {
 	filterOperator.value = undefined
 	filterValue.value = undefined
+	emit('close')
 }
+
+// For a bried period, the value of a date filter with 'between' operator is stored as `from_date,to_date` string. This computed property helps to convert it to array and vice versa for the DateRangePicker component.
+const dateRangeVal = computed({
+	get: () => normalizeDateRange(state.value),
+	set: (val: any) => {
+		state.value = normalizeDateRange(val)
+	},
+})
 </script>
 
 <template>
@@ -56,7 +71,7 @@ function clearFilter() {
 			v-if="filterType === 'Number'"
 			class="w-[200px]"
 			v-model:operator="state.operator"
-			v-model:value="(state.value as number)"
+			v-model:value="state.value as number"
 		/>
 		<template v-else>
 			<div id="operator" class="!min-w-[200px] flex-1">
@@ -69,30 +84,27 @@ function clearFilter() {
 				/>
 			</div>
 			<div id="value" class="!min-w-[200px] flex-1 flex-shrink-0">
-				<!-- todo: use date picker component -->
 				<DatePicker
 					v-if="valueSelectorType === 'date'"
-					:range="false"
-					:modelValue="[state.value as string]"
-					@update:modelValue="state.value = $event[0]"
-				></DatePicker>
-				<DatePicker
+					:modelValue="state.value as string"
+					@update:modelValue="state.value = $event"
+				/>
+				<DateRangePicker
 					v-else-if="valueSelectorType === 'date_range'"
-					:range="true"
-					v-model="(state.value as string[])"
-				></DatePicker>
+					v-model="dateRangeVal as string[]"
+				/>
 				<RelativeDatePicker
 					v-else-if="valueSelectorType === 'relative_date'"
-					v-model="(state.value as string)"
+					v-model="state.value as string"
 				/>
 				<ColumnFilterValueSelector
 					v-else-if="valueSelectorType === 'select'"
-					v-model="(state.value as string[])"
+					v-model="state.value as string[]"
 					:valuesProvider="props.valuesProvider"
 				/>
 				<FormControl
 					v-else-if="valueSelectorType === 'text'"
-					v-model="state.value"
+					v-model="state.value as string"
 					placeholder="Value"
 					autocomplete="off"
 				/>

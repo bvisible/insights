@@ -191,6 +191,9 @@ pids
 *.seed
 *.pid.lock
 todo
-# //// Neoffice — CLAUDE.md deliberately NOT ignored: it carries the branch and
-# //// commit-the-build conventions of this fork and must travel with the repo.
-# CLAUDE.md  # 2026-05-07 unshipped to document commit-the-build pipeline
+frontend/package-lock.json
+.opencode/package-lock.json
+frontend/components.d.ts
+docs/
+scripts/
+.claude/

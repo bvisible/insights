@@ -1,4 +1,6 @@
 import { reactive, ref, toRefs } from 'vue'
+// @ts-ignore
+import { useTelemetry } from '../telemetry'
 import useChart from '../charts/chart'
 import {
 	getUniqueId,
@@ -11,8 +13,8 @@ import {
 import useDocumentResource from '../helpers/resource'
 import { isFilterValid } from '../query/components/filter_utils'
 import { column, filter_group } from '../query/helpers'
-import session from '../session'
-import { FilterArgs, FilterGroup, FilterOperator, FilterValue } from '../types/query.types'
+import router from '../router'
+import { AdhocFilters, FilterArgs, FilterGroup, FilterOperator, FilterValue } from '../types/query.types'
 import {
 	InsightsDashboardv3,
 	WorkbookChart,
@@ -39,6 +41,7 @@ export type FilterState = {
 }
 
 function makeDashboard(name: string) {
+	const { capture } = useTelemetry()
 	const dashboard = getDashboardResource(name)
 
 	const editing = ref(false)
@@ -52,8 +55,9 @@ function makeDashboard(name: string) {
 	const filters = ref<Record<string, FilterArgs[]>>({})
 	const filterStates = ref<Record<string, FilterState>>({})
 
-	function addChart(charts: WorkbookChart[]) {
+	function addChart(charts: WorkbookChart[], via: 'selector' | 'drag') {
 		const maxY = getMaxY()
+		let added = 0
 		charts.forEach((chart) => {
 			if (
 				!dashboard.doc.items.some((item) => item.type === 'chart' && item.chart === chart.name)
@@ -69,8 +73,12 @@ function makeDashboard(name: string) {
 						h: chart.chart_type === 'Number' ? 3 : 8,
 					},
 				})
+				added++
 			}
 		})
+		if (added) {
+			capture('dashboard_chart_added', { via, count: added })
+		}
 	}
 
 	function getMaxY() {
@@ -210,17 +218,32 @@ function makeDashboard(name: string) {
 	function refreshChart(chart_name: string, force = false) {
 		const chart = useChart(chart_name)
 		chart.dataQuery.adhocFilters = getAdhocFilters(chart_name)
+		chart.dataQuery.executionPriority = getLayoutRank(chart_name)
 		chart.refresh(force)
 	}
 
-	function getAdhocFilters(chart_name: string) {
+	// charts reach the queue in whatever order their docs finish loading, so rank
+	// them by grid position instead: top row first, left to right within a row
+	function getLayoutRank(chart_name: string) {
+		const item = dashboard.doc.items.find(
+			(item) => item.type === 'chart' && item.chart === chart_name
+		)
+		if (!item) return undefined
+		return item.layout.y * grid_cols + item.layout.x
+	}
+
+	function getAdhocFilters(chart_name: string, exclude_filter_name?: string) {
 		const filtersApplied = dashboard.doc.items.filter(
-			(item) => item.type === 'filter' && 'links' in item && item.links[chart_name]
+			(item) =>
+				item.type === 'filter' &&
+				'links' in item &&
+				item.links[chart_name] &&
+				(!exclude_filter_name || item.filter_name !== exclude_filter_name)
 		)
 
 		if (filtersApplied.length === 0) return
 
-		const filtersByQuery = {} as Record<string, FilterGroup>
+		const filtersByQuery = {} as AdhocFilters
 
 		function addFilterToQuery(query_name: string, filter: FilterArgs) {
 			if (!filtersByQuery[query_name]) {
@@ -329,25 +352,23 @@ function makeDashboard(name: string) {
 	}
 
 
-	const defaultFilters = dashboard.doc.items.reduce((acc, item) => {
-		if (item.type != 'filter') return acc
-
-		const filterItem = item as WorkbookDashboardFilter
-		if (filterItem.default_operator && filterItem.default_value) {
-			acc[filterItem.filter_name] = {
-				operator: filterItem.default_operator,
-				value: filterItem.default_value,
-			}
-		}
-		return acc
-	}, {} as typeof filterStates.value)
-
-	Object.assign(filterStates.value, defaultFilters)
-
 	const key = `insights:dashboard-filter-states-${name}`
 	filterStates.value = store(key, () => filterStates.value)
 
 	waitUntil(() => dashboard.isloaded).then(() => {
+		const defaultFilters = dashboard.doc.items.reduce((acc, item) => {
+			if (item.type != 'filter') return acc
+			const filterItem = item as WorkbookDashboardFilter
+			if (filterItem.default_operator && filterItem.default_value) {
+				acc[filterItem.filter_name] = {
+					operator: filterItem.default_operator,
+					value: filterItem.default_value,
+				}
+			}
+			return acc
+		}, {} as typeof filterStates.value)
+		Object.assign(filterStates.value, defaultFilters)
+
 		wheneverChanges(
 			() => dashboard.doc.title,
 			() => {
@@ -413,6 +434,13 @@ const INITIAL_DOC: InsightsDashboardv3 = {
 	has_workbook_access: false,
 }
 
+// Which page this view is on, read off the route the load happens on.
+function viewedOn() {
+	const page = router.currentRoute.value.name
+	if (page === 'SharedDashboard') return 'shared'
+	return page === 'Dashboard' ? 'dashboards' : 'workbook'
+}
+
 function getDashboardResource(name: string) {
 	const doctype = 'Insights Dashboard v3'
 	const dashboard = useDocumentResource<InsightsDashboardv3>(doctype, name, {
@@ -421,12 +449,20 @@ function getDashboardResource(name: string) {
 		disableLocalStorage: true,
 		transform(doc: any) {
 			doc.items = safeJSONParse(doc.items) || []
+			// grid-layout-plus owns `moved` and writes it into every layout when
+			// the grid mounts, which leaves a freshly opened dashboard dirty.
+			// Set it on load instead.
+			doc.items.forEach((item: any) => {
+				if (item.layout && item.layout.moved === undefined) {
+					item.layout.moved = false
+				}
+			})
 			return doc
 		},
 	})
-	if (session.isLoggedIn) {
-		dashboard.onAfterLoad(() => dashboard.call('track_view').catch(() => { }))
-	}
+	dashboard.onAfterLoad(() =>
+		dashboard.call('track_view', { surface: viewedOn() }).catch(() => {}),
+	)
 	wheneverChanges(() => dashboard.doc.read_only, () => {
 		if (dashboard.doc.read_only) {
 			dashboard.autoSave = false

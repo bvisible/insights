@@ -8,7 +8,10 @@ from frappe.utils import now_datetime
 from ibis import _
 
 from insights.insights.doctype.insights_query.utils import infer_type_from_list
-from insights.insights.query_builders.sql_functions import handle_timespan
+from insights.insights.query_builders.sql_functions import (
+    get_week_start_day_index,
+    handle_timespan,
+)
 
 
 # aggregate functions
@@ -307,6 +310,19 @@ def if_else(condition: ir.BooleanValue, true_value: ir.Value, false_value: ir.Va
     return ibis.cases((condition, true_value), else_=false_value)
 
 
+def one_if(condition: ir.BooleanValue):
+    """
+    def one_if(condition)
+
+    Convert a boolean condition to 1 or 0.
+
+    Examples:
+    - one_if(status == 'Active')
+    - one_if(age > 18)
+    """
+    return if_else(condition, 1, 0)
+
+
 def case(condition: ir.BooleanValue, value: ir.Value, *args: tuple[ir.BooleanValue, ir.Value]):
     """
     def case(condition, value, *args)
@@ -543,7 +559,7 @@ def textsplit(column: ir.StringColumn, delimiter: str, max_splits: int):
     """
     query = frappe.flags.current_ibis_query
     if query is None:
-        frappe.throw("Query not found")
+        return column  # return original column if query is not found
 
     column_name = column.get_name() if hasattr(column, "get_name") else str(column)
 
@@ -565,9 +581,9 @@ def json_extract(column: ir.StringColumn, *field_names: str):
     """
     query = frappe.flags.current_ibis_query
     if query is None:
-        frappe.throw("Query not found")
+        return column  # return original column if query is not found
 
-    json_column = column.cast("json")
+    json_column = normalize_json(column).cast("json")
 
     # cast JSON values to string and remove quotes
     clean_columns = {}
@@ -598,6 +614,26 @@ def json_extract(column: ir.StringColumn, *field_names: str):
         query = query.mutate({field: clean_col})
 
     return query
+
+
+def normalize_json(column: ir.StringColumn):
+    """
+    def normalize_json(column)
+
+    Normalize a JSON string by replacing single quotes with double quotes and unescaping escaped single quotes.
+
+    Examples:
+    - normalize_json(api_response)
+    """
+    return (
+        column
+        # opening quote: a ' that follows {  [  ,  or  :
+        .re_replace(r"([{\[,:]\s*)'", r'\1"')
+        # closing quote: a ' that precedes }  ]  ,  or  :
+        .re_replace(r"'(\s*[}\],:])", r'"\1')
+        # unescape Python's \' (apostrophe inside a single-quoted value)
+        .re_replace(r"\\'", "'")
+    )
 
 
 # date functions
@@ -1161,20 +1197,11 @@ def week_start(column: ir.DateValue):
     - week_start(order_date)
     """
 
-    week_start_day = frappe.db.get_single_value("Insights Settings", "week_starts_on") or "Monday"
-    days = [
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday",
-        "Sunday",
-    ]
-    week_starts_on = days.index(week_start_day)
-    day_of_week = column.day_of_week.index().cast("int32")
+    week_starts_on = get_week_start_day_index()
+    date = column.truncate("D")
+    day_of_week = date.day_of_week.index().cast("int32")
     adjusted_week_start = (day_of_week - week_starts_on + 7) % 7
-    week_start = column - adjusted_week_start.as_interval("D")
+    week_start = date - adjusted_week_start.as_interval("D")
     return week_start
 
 
@@ -1187,9 +1214,7 @@ def month_start(column: ir.DateValue):
     Examples:
     - month_start(order_date)
     """
-
-    month_start = column.strftime("%Y-%m-01").cast("date")
-    return month_start
+    return column.truncate("M")
 
 
 def quarter_start(column: ir.DateValue):
@@ -1201,12 +1226,7 @@ def quarter_start(column: ir.DateValue):
     Examples:
     - quarter_start(order_date)
     """
-
-    year = column.year()
-    quarter = column.quarter()
-    month = (quarter * 3) - 2
-    quarter_start = ibis.date(year, month, 1)
-    return quarter_start
+    return column.truncate("Q")
 
 
 def year_start(column: ir.DateValue):
@@ -1218,9 +1238,7 @@ def year_start(column: ir.DateValue):
     Examples:
     - year_start(order_date)
     """
-
-    year_start = column.strftime("%Y-01-01").cast("date")
-    return year_start
+    return column.truncate("Y")
 
 
 def fiscal_year_start(column: ir.DateValue):
@@ -1233,8 +1251,13 @@ def fiscal_year_start(column: ir.DateValue):
     - fiscal_year_start(order_date)
     """
 
-    fiscal_year_start_month = 4
-    fiscal_year_start_day = 1
+    fy_start = frappe.db.get_single_value("Insights Settings", "fiscal_year_start")
+    if not fy_start:
+        from datetime import date
+
+        fy_start = date(date.today().year - 1, 4, 1)
+    fiscal_year_start_month = fy_start.month
+    fiscal_year_start_day = fy_start.day
 
     year = column.year()
     month = column.month()

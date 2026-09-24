@@ -1,4 +1,5 @@
 import router from '@/router'
+import { __ } from '../translation'
 import { useTimeAgo } from '@vueuse/core'
 import { call } from 'frappe-ui'
 import { reactive, ref } from 'vue'
@@ -9,13 +10,18 @@ import { WorkbookListItem } from '../types/workbook.types'
 const workbooks = ref<WorkbookListItem[]>([])
 
 const loading = ref(false)
-async function getWorkbooks(search_term?: string, limit: number = 100) {
+async function getWorkbooks(
+	search_term?: string,
+	limit: number = 100,
+	scope?: 'all' | 'owned' | 'shared',
+) {
 	loading.value = true
-	workbooks.value = await call('insights.api.workbooks.get_workbooks', {
+	const result = await call('insights.api.workbooks.get_workbooks', {
 		search_term,
 		limit,
+		scope: scope === 'all' ? null : scope,
 	})
-	workbooks.value = workbooks.value.map((workbook: any) => ({
+	workbooks.value = result.map((workbook: any) => ({
 		...workbook,
 		created_from_now: useTimeAgo(workbook.creation),
 		modified_from_now: useTimeAgo(workbook.modified),
@@ -26,13 +32,13 @@ async function getWorkbooks(search_term?: string, limit: number = 100) {
 
 function importWorkbook(workbook: any) {
 	confirmDialog({
-		title: 'Import Workbook',
-		message: 'Are you sure you want to import this workbook?',
+		title: __('Import Workbook'),
+		message: __('Are you sure you want to import this workbook?'),
 		onSuccess: () => {
 			call('insights.api.workbooks.import_workbook', { workbook }).then((name: string) => {
 				getWorkbooks().then(() => {
 					createToast({
-						message: 'Workbook imported successfully',
+						message: __('Workbook imported successfully'),
 						variant: 'success',
 					})
 				})
@@ -43,14 +49,12 @@ function importWorkbook(workbook: any) {
 }
 
 export default function useWorkbookListItemStore() {
-	if (!workbooks.value.length) {
-		getWorkbooks()
-	}
-
+	// the list view drives fetching (with scope); no implicit fetch here,
+	// otherwise an unscoped "fetch all" can race with and overwrite it
 	return reactive({
 		workbooks,
 		loading,
 		getWorkbooks,
-		importWorkbook
+		importWorkbook,
 	})
 }

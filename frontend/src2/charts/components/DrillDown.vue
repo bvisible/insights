@@ -3,13 +3,15 @@ import { debounce } from 'frappe-ui'
 import { Combine } from 'lucide-vue-next'
 import { inject, provide, ref, nextTick } from 'vue'
 import { wheneverChanges } from '../../helpers'
-import QueryBuilderToolbar from '../../query/components/QueryBuilderToolbar.vue'
+import QueryExecutionStatus from '../../query/components/QueryExecutionStatus.vue'
+import QueryToolbar from '../../query/components/QueryToolbar.vue'
 import QueryDataTable from '../../query/components/QueryDataTable.vue'
 import QueryOperations from '../../query/components/QueryOperations.vue'
 import { count, makeDimension } from '../../query/helpers'
 import { Query } from '../../query/query'
 import { QueryResultColumn } from '../../types/query.types'
 import { Dashboard } from '../../dashboard/dashboard'
+import { __ } from '../../translation'
 
 const props = defineProps<{ query: Query }>()
 
@@ -55,7 +57,7 @@ const groupBy = debounce(_groupBy, 50)
 	<Dialog
 		v-model="show"
 		:options="{
-			title: 'Drill Down',
+			title: __('Drill Down'),
 			size: '5xl',
 		}"
 	>
@@ -68,7 +70,9 @@ const groupBy = debounce(_groupBy, 50)
 				class="relative flex h-[32rem] w-full flex-1 gap-4 overflow-hidden bg-white"
 			>
 				<div class="flex h-full flex-1 flex-col gap-2 overflow-hidden p-0.5">
-					<QueryBuilderToolbar></QueryBuilderToolbar>
+					<QueryToolbar>
+						<QueryExecutionStatus />
+					</QueryToolbar>
 					<div class="flex flex-1 overflow-hidden rounded border">
 						<QueryDataTable
 							:enable-sort="true"

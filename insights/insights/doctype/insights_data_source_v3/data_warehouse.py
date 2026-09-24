@@ -16,12 +16,29 @@ from frappe.utils import get_files_path, now
 from frappe.utils.background_jobs import is_job_enqueued
 from ibis import _
 from ibis.backends.duckdb import Backend as DuckDBBackend
-from ibis.expr.types import Expr
+from ibis.common.exceptions import TableNotFound
+from ibis.expr.types import Expr, Table
 
 import insights
+from insights.insights.doctype.insights_data_source_v3.connectors.duckdb import (
+    IMPORT_WRITE_LOCK_TIMEOUT,
+    WRITE_LOCK_TIMEOUT,
+    local_duckdb_write_connection,
+    open_local_duckdb,
+)
 from insights.utils import InsightsDataSourcev3, InsightsTablev3
 
 WAREHOUSE_DB_NAME = "insights"
+
+DEFAULT_ROW_LIMIT = 10_00_000
+
+
+def row_limit(table_row_limit: int | None = None) -> int:
+    return (
+        table_row_limit
+        or frappe.db.get_single_value("Insights Settings", "max_records_to_sync")
+        or DEFAULT_ROW_LIMIT
+    )
 
 
 class Warehouse:
@@ -38,11 +55,11 @@ class Warehouse:
     def get_connection(self, database: str | None = None, read_only: bool = True) -> DuckDBBackend:
         path = self.get_db_path()
 
-        if not os.path.exists(path):
-            db = ibis.duckdb.connect(path)
-            db.disconnect()
-
-        db = ibis.duckdb.connect(path, read_only=read_only)
+        db = open_local_duckdb(
+            path,
+            read_only=read_only,
+            allowed_dir=str(Path(tempfile.gettempdir())) if not read_only else None,
+        )
 
         if database:
             db.raw_sql(f"USE '{database}'")
@@ -64,33 +81,49 @@ class Warehouse:
 
     @contextmanager
     def get_write_connection(
-        self, database: str | None = None, timeout: int = 30
+        self, database: str | None = None, timeout: int = WRITE_LOCK_TIMEOUT
     ) -> Generator[DuckDBBackend, None, None]:
-        from frappe.utils.synchronization import filelock
+        path = self.get_db_path()
+        allowed_dir = str(Path(tempfile.gettempdir()))
 
-        with filelock("insights_warehouse_write", timeout=timeout):
-            db = self.get_connection(database, read_only=False)
-            try:
-                yield db
-            finally:
-                db.disconnect()
+        with local_duckdb_write_connection(
+            path, cache_key=WAREHOUSE_DB_NAME, allowed_dir=allowed_dir, timeout=timeout
+        ) as db:
+            if database:
+                db.raw_sql(f"USE '{database}'")
+            yield db
 
     def get_table(self, data_source: str, table_name: str) -> "WarehouseTable":
         return WarehouseTable(data_source, table_name)
 
     def get_table_writer(
-        self, table_name: str, schema: ibis.Schema, mode: str = "replace", log_fn=None
+        self,
+        table_name: str,
+        schema: ibis.Schema,
+        database: str = "main",
+        mode: str = "replace",
+        primary_key_column: str = "",
+        cursor_column: str = "",
+        log_fn=None,
     ) -> "WarehouseTableWriter":
         """Create a table writer for batch inserts with automatic cleanup.
 
         Usage:
-            with warehouse.get_table_writer("table", schema) as writer:
+            with warehouse.get_table_writer("table", schema, database="my_schema") as writer:
                 writer.insert(df1)
                 writer.insert(df2)
             # On successful exit, data is committed to warehouse
             # On exception, temp files are cleaned up automatically
         """
-        return WarehouseTableWriter(table_name, table_schema=schema, mode=mode, log_fn=log_fn)
+        return WarehouseTableWriter(
+            table_name,
+            table_schema=schema,
+            database=database,
+            mode=mode,
+            primary_key_column=primary_key_column,
+            cursor_column=cursor_column,
+            log_fn=log_fn,
+        )
 
 
 class WarehouseTableWriter:
@@ -111,12 +144,16 @@ class WarehouseTableWriter:
         table_schema: ibis.Schema,
         database: str = "main",
         mode: str = "replace",
+        primary_key_column: str = "",
+        cursor_column: str = "",
         log_fn=None,
     ):
         self.database = database
         self.table_name = table_name
         self.table_schema = table_schema
-        self.mode = mode  # 'replace' or 'append'
+        self.mode = mode
+        self.primary_key_column = primary_key_column
+        self.cursor_column = cursor_column
         self._log = log_fn or (lambda *args, **kwargs: None)
 
         self._temp_dir: Path | None = None
@@ -143,8 +180,8 @@ class WarehouseTableWriter:
         if self._temp_dir is None:
             raise RuntimeError("WarehouseTableWriter must be used as a context manager")
 
-        if isinstance(data, pd.DataFrame):
-            data = ibis.memtable(data)
+        # switch to memory backend for writing to temp directory
+        data = ibis.memtable(data)
 
         parquet_path = self._temp_dir / f"batch_{self._batch_count + 1}.parquet"
         self._log(f"Writing batch {self._batch_count + 1}")
@@ -166,14 +203,24 @@ class WarehouseTableWriter:
 
         total_rows = 0
         try:
-            with insights.warehouse.get_write_connection(self.database) as db:
+            with insights.warehouse.get_write_connection(timeout=IMPORT_WRITE_LOCK_TIMEOUT) as db:
                 self._log(f"Committing {len(self._parquet_files)} parquet files to '{self.table_name}'")
+
+                with suppress(CatalogException):
+                    db.create_database(self.database)
+
+                db.raw_sql(f"USE '{self.database}'")
+
+                self._log(f"Switched to '{self.database}' database")
 
                 parquet_glob = str(self._temp_dir / "*.parquet")
                 merged = db.read_parquet(parquet_glob)
 
-                if self.mode == "append" and self._table_exists(db):
-                    db.insert(self.table_name, merged)
+                if self._table_exists(db) and self.mode in ("append", "upsert"):
+                    if self.mode == "append":
+                        db.insert(self.table_name, merged)
+                    elif self.mode == "upsert":
+                        self._upsert(db, merged)
                 else:
                     db.create_table(self.table_name, merged, schema=self.table_schema, overwrite=True)
 
@@ -193,6 +240,41 @@ class WarehouseTableWriter:
             return db.list_tables(like=f"^{self.table_name}$")
         except Exception:
             return False
+
+    def _upsert(self, db: DuckDBBackend, incoming: Table) -> None:
+        if not self.primary_key_column or not self.cursor_column:
+            raise RuntimeError("Upsert mode requires both cursor and primary key columns")
+
+        source_query = ibis.to_sql(incoming, dialect="duckdb", pretty=False)
+        merge_stmt = self._build_merge_statement(source_query)
+        self._log(f"MERGE Query:\n{merge_stmt}")
+        db.raw_sql(merge_stmt)
+
+    def _build_merge_statement(self, source_query: str) -> str:
+        source_alias = "source"
+        target_alias = "target"
+
+        def quote_ident(name: str) -> str:
+            return '"' + name.replace('"', '""') + '"'
+
+        def qualified_column(name: str, table: str) -> str:
+            return f"{table}.{quote_ident(name)}"
+
+        assignments = ", ".join(
+            f"{quote_ident(name)} = {qualified_column(name, source_alias)}"
+            for name in self.table_schema.names
+        )
+        insert_columns = ", ".join(quote_ident(name) for name in self.table_schema.names)
+        insert_values = ", ".join(qualified_column(name, source_alias) for name in self.table_schema.names)
+
+        return (
+            f"MERGE INTO {quote_ident(self.table_name)} AS {target_alias} "
+            f"USING ({source_query}) AS {source_alias} "
+            f"ON {qualified_column(self.primary_key_column, target_alias)} = "
+            f"{qualified_column(self.primary_key_column, source_alias)} "
+            f"WHEN MATCHED THEN UPDATE SET {assignments} "
+            f"WHEN NOT MATCHED THEN INSERT ({insert_columns}) VALUES ({insert_values})"
+        )
 
     def rollback(self) -> None:
         """Rollback and cleanup all temporary files."""
@@ -220,15 +302,11 @@ class WarehouseTable:
 
         self.data_source = data_source
         self.table_name = table_name
-        self.warehouse_table_name = self.format_table_name(data_source, table_name)
+        self.schema = get_warehouse_schema_name(data_source)
+        self.warehouse_table_name = frappe.scrub(table_name)
         self.table_doc_name = get_table_name(data_source, table_name)
 
         self.validate()
-
-    @staticmethod
-    def format_table_name(data_source: str, table_name: str) -> str:
-        """Format a warehouse table name from data source and table name."""
-        return f"{frappe.scrub(data_source)}.{frappe.scrub(table_name)}"
 
     def validate(self):
         if not self.data_source:
@@ -238,14 +316,15 @@ class WarehouseTable:
 
     def get_ibis_table(self, import_if_not_exists: bool = True) -> Expr:
         try:
-            return insights.warehouse.db.table(self.warehouse_table_name)
-        except Exception:
+            return insights.warehouse.db.table(self.warehouse_table_name, database=self.schema)
+        except TableNotFound:
             if import_if_not_exists:
-                self.enqueue_import()
+                self.announce_missing_table(import_running=self.enqueue_import())
                 remote_table = self.get_remote_table()
                 return insights.warehouse.db.create_table(
                     self.warehouse_table_name,
                     schema=remote_table.schema(),
+                    database=self.schema,
                     temp=True,
                     overwrite=True,
                 )
@@ -253,26 +332,81 @@ class WarehouseTable:
                 frappe.throw(
                     f"{self.table_name} of {self.data_source} is not imported to the data warehouse."
                 )
+        except Exception as e:
+            frappe.log_error(e)
+            frappe.throw("Error accessing the data warehouse. Please try again.")
+
+    def announce_missing_table(self, import_running: bool = False):
+        """Say that the empty table the reader is about to get is not the real one.
+
+        A miss substitutes an empty table of the right shape so the chart still
+        renders while the import runs. That is indistinguishable from a table
+        which genuinely holds no rows, so a table whose import keeps failing
+        reads as a legitimate zero.
+
+        enqueue_import already speaks for a job that is queued or running, and
+        the newest log stays "Failed" until that job starts — so announcing the
+        old failure as well would contradict it. Only the gap it leaves is ours.
+        """
+        frappe.logger().warning(
+            f"{self.table_name} of {self.data_source} is not in the data warehouse, "
+            "serving an empty table in its place"
+        )
+
+        if import_running or not self.last_import_failed():
+            return
+
+        insights.create_toast(
+            f"The last import of {self.table_name} failed, so it has no rows yet. "
+            "A fresh import is queued. Check the table's import logs in the data store.",
+            title="Import Failed",
+            type="error",
+            duration=7,
+        )
+
+    def last_import_failed(self) -> bool:
+        log = frappe.qb.DocType("Insights Table Import Log")
+        last_status = (
+            frappe.qb.from_(log)
+            .select(log.status)
+            .where((log.data_source == self.data_source) & (log.table_name == self.table_name))
+            .orderby(log.creation, order=frappe.qb.desc)
+            .limit(1)
+            .run()
+        )
+        return bool(last_status) and last_status[0][0] == "Failed"
 
     def get_remote_table(self) -> Expr:
         ds = InsightsDataSourcev3.get_doc(self.data_source)
         return ds.get_ibis_table(self.table_name)
 
-    def enqueue_import(self):
+    def enqueue_import(self) -> bool:
+        """Queue an import for this table. True when one was already under way."""
         if frappe.db.get_value("Insights Data Source v3", self.data_source, "type") == "REST API":
             frappe.throw("Import not supported for API data sources")
 
         importer = WarehouseTableImporter(self)
-        importer.enqueue_import()
+        return importer.enqueue_import()
+
+    def drop(self) -> None:
+        """Drop this table from the warehouse. No-op if it does not exist."""
+        with insights.warehouse.get_write_connection(self.schema) as db:
+            with suppress(Exception):
+                db.drop_table(self.warehouse_table_name, force=True)
 
 
 class WarehouseTableImporter:
     def __init__(self, table: WarehouseTable):
         self.table = table
-        self.remote_table = None
+        self.remote_table: Table = None
         self.remote_table_schema = None
-        self.primary_key = ""
+        self.cursor_column = ""
+        self.dedupe_key_column = ""
         self.warehouse_table_name = ""
+        self.sync_strategy = "Append Only"
+        self.writer_mode = "replace"  # overridden to "append" for incremental syncs
+
+        self.resumed = False
 
         self.log = None
         self.last_log_time = None
@@ -290,23 +424,25 @@ class WarehouseTableImporter:
             ),
         )
 
-    def enqueue_import(self):
+    def enqueue_import(self) -> bool:
+        """Queue an import for this table. True when one was already under way."""
         job_id = f"import_{frappe.scrub(self.table.data_source)}_{frappe.scrub(self.table.table_name)}"
 
         if is_job_enqueued(job_id) or self.import_in_progress():
             insights.create_toast(
-                f"Import for {frappe.bold(self.table.table_name)} is in progress."
+                f"Import for {self.table.table_name} is in progress."
                 "You may not see the results till the import is completed.",
                 title="Import In Progress",
                 type="info",
                 duration=7,
             )
-            return
+            return True
 
         enqueue_warehouse_table_import(
             data_source=self.table.data_source,
             table_name=self.table.table_name,
         )
+        return False
 
     def start_import(self):
         from insights.insights.doctype.insights_data_source_v3.insights_data_source_v3 import (
@@ -315,13 +451,21 @@ class WarehouseTableImporter:
 
         with db_connections():
             self.prepare_log()
-            self.prepare_settings()
-            self.prepare_remote_table()
-            self.start_batch_import()
-            self.update_log()
+            try:
+                self.prepare_settings()
+                self.prepare_remote_table()
+                self.start_batch_import()
+            except Exception:
+                if self.log.status != "Failed":
+                    self.log.status = "Failed"
+                    self._log(frappe.get_traceback())
+                raise
+            finally:
+                self.update_log()
+                self.capture_outcome()
 
         insights.create_toast(
-            f"Imported {frappe.bold(self.table.table_name)} to the data store. "
+            f"Imported {self.table.table_name} to the data store. "
             "Please refresh the query to see the updated data.",
             title="Import Completed",
             type="success",
@@ -342,24 +486,39 @@ class WarehouseTableImporter:
         )
 
         insights.create_toast(
-            f"Importing {frappe.bold(self.table.table_name)} to the data store. "
+            f"Importing {self.table.table_name} to the data store. "
             "You may not see the results till the import is completed.",
             title="Import Started",
             duration=7,
         )
 
     def prepare_settings(self) -> dict:
-        self.settings.row_limit = (
-            frappe.get_value("Insights Table v3", self.table.table_doc_name, "row_limit")
-            or frappe.db.get_single_value("Insights Settings", "max_records_to_sync")
-            or 10_00_000
+        table_doc = frappe.get_value(
+            "Insights Table v3",
+            self.table.table_doc_name,
+            [
+                "row_limit",
+                "before_import_script",
+                "sync_mode",
+                "sync_strategy",
+                "sync_cursor_column",
+                "sync_primary_key_column",
+                "sync_from",
+                "last_sync_bookmark",
+            ],
+            as_dict=True,
         )
-        self.settings.before_import_script = (
-            frappe.get_value("Insights Table v3", self.table.table_doc_name, "before_import_script") or ""
-        )
+        self.settings.row_limit = row_limit(table_doc.row_limit)
+        self.settings.before_import_script = table_doc.before_import_script or ""
         self.settings.memory_limit = (
             frappe.db.get_single_value("Insights Settings", "max_memory_usage") or 512
         )
+        self.settings.sync_mode = table_doc.sync_mode or "Full"
+        self.settings.sync_strategy = table_doc.sync_strategy or "Append Only"
+        self.settings.sync_cursor_column = table_doc.sync_cursor_column or ""
+        self.settings.sync_primary_key_column = table_doc.sync_primary_key_column or ""
+        self.settings.sync_from = table_doc.sync_from  # Datetime or None
+        self.settings.last_sync_bookmark = table_doc.last_sync_bookmark or ""
         self.log.db_set(
             {
                 "row_limit": self.settings.row_limit,
@@ -367,19 +526,41 @@ class WarehouseTableImporter:
             },
             commit=True,
         )
+        self._log(
+            f"Settings: sync_mode={self.settings.sync_mode}"
+            f", strategy={self.settings.sync_strategy}"
+            f", cursor={self.settings.sync_cursor_column or 'N/A'}"
+            f", key={self.settings.sync_primary_key_column or 'N/A'}"
+            f", sync_from={self.settings.sync_from or 'N/A'}"
+            f", bookmark={self.settings.last_sync_bookmark or 'N/A'}"
+            f", row_limit={self.settings.row_limit}"
+        )
+
+    def _disable_statement_timeout(self):
+        """Disable statement timeout on the remote connection.
+
+        Import jobs are long-running background tasks managed by the queue
+        worker, so the user-facing max_execution_time limit should not apply.
+        """
+        backend = insights.db_connections.get(self.table.data_source)
+        if backend is None:
+            return
+        with suppress(Exception):
+            backend.raw_sql("SET MAX_STATEMENT_TIME=0")
 
     def prepare_remote_table(self) -> Expr:
         self.remote_table = self.table.get_remote_table()
+        self._disable_statement_timeout()
 
-        if hasattr(self.remote_table, "creation"):
-            self.primary_key = "creation"
-            self.remote_table = self.remote_table.order_by(ibis.desc("creation"))
-        elif hasattr(self.remote_table, "timestamp"):
-            self.primary_key = "timestamp"
-            self.remote_table = self.remote_table.order_by(ibis.desc("timestamp"))
+        if self.settings.sync_mode == "Incremental":
+            self._prepare_incremental_table()
         else:
-            self.primary_key = ""
+            self._prepare_full_table()
 
+        self.remote_table_schema = self.remote_table.schema()
+        self.log.db_set("query", ibis.to_sql(self.remote_table), commit=True)
+
+    def _apply_before_import_script(self) -> None:
         if self.settings.before_import_script:
             from .ibis_utils import exec_with_return
 
@@ -387,10 +568,83 @@ class WarehouseTableImporter:
                 self.settings.before_import_script, {"table": self.remote_table}
             )
 
-        self.remote_table = self.remote_table.limit(self.settings.row_limit)
-        self.remote_table_schema = self.remote_table.schema()
+    def _prepare_full_table(self) -> None:
+        if hasattr(self.remote_table, "creation"):
+            self.cursor_column = "creation"
+        elif hasattr(self.remote_table, "timestamp"):
+            self.cursor_column = "timestamp"
+        else:
+            self.cursor_column = ""
 
-        self.log.db_set("query", ibis.to_sql(self.remote_table), commit=True)
+        self.dedupe_key_column = ""
+
+        self._apply_before_import_script()
+        self.remote_table = self.apply_limit(self.remote_table)
+        self.writer_mode = "replace"
+
+    def _prepare_incremental_table(self) -> None:
+        self.cursor_column = self.settings.sync_cursor_column
+        self.dedupe_key_column = self.settings.sync_primary_key_column
+        self.sync_strategy = self.settings.sync_strategy or "Append Only"
+
+        self._apply_before_import_script()
+
+        bookmark = self._resolve_incremental_bookmark()
+        self._log(f"Incremental sync: {self.cursor_column} > {bookmark}")
+        self.remote_table = self.remote_table.filter(_[self.cursor_column] > bookmark)
+
+        self.writer_mode = "upsert" if self.sync_strategy == "Update or Insert" else "append"
+
+    def _resolve_incremental_bookmark(self):
+        """Return the cursor value to filter from for incremental sync, following this precedence:
+        1. Last sync bookmark (if exists and valid)
+        2. Sync From date (if set)
+        3. Throw error if neither is available
+        """
+        bookmark = self.settings.last_sync_bookmark
+
+        if bookmark:
+            # Verify the warehouse table still exists; if not, treat as first sync
+            try:
+                insights.warehouse.db.table(self.table.warehouse_table_name, database=self.table.schema)
+            except TableNotFound:
+                self._log("Warehouse table not found despite existing bookmark — falling back to sync_from.")
+                bookmark = ""
+
+        if bookmark:
+            self.resumed = True
+            return bookmark
+
+        if self.settings.sync_from:
+            return str(self.settings.sync_from)
+
+        frappe.throw(
+            f"Incremental sync for <b>{self.table.table_name}</b> has no bookmark and no Sync From date. "
+            "Set a <b>Sync From</b> date on the table to define where the first import should start."
+        )
+
+    def apply_limit(self, table: Expr) -> Expr:
+        if not self.cursor_column:
+            return table.limit(self.settings.row_limit)
+
+        pk = self.cursor_column
+        cutoff_row = (
+            table.order_by(ibis.desc(pk, nulls_first=False))
+            # OFFSET to the Nth row
+            # Only selects the pk column so the query is a covering index scan
+            .limit(1, offset=self.settings.row_limit - 1)
+            .select(pk)
+            .execute()
+        )
+
+        if len(cutoff_row) == 0:
+            return table
+
+        cutoff_value = cutoff_row[pk].iloc[0]
+        self._log(f"Row limit cutoff: {pk} >= {cutoff_value}")
+
+        # replace LIMIT with WHERE clause
+        return table.filter(_[pk] >= cutoff_value)
 
     def start_batch_import(self):
         self.warehouse_table_name = self.table.warehouse_table_name
@@ -398,7 +652,13 @@ class WarehouseTableImporter:
         try:
             batch_size = self.calculate_batch_size()
             with insights.warehouse.get_table_writer(
-                self.warehouse_table_name, self.remote_table_schema, log_fn=self._log
+                self.warehouse_table_name,
+                self.remote_table_schema,
+                database=self.table.schema,
+                mode=self.writer_mode,
+                primary_key_column=self.dedupe_key_column,
+                cursor_column=self.cursor_column,
+                log_fn=self._log,
             ) as writer:
                 total_rows = self.process_batches(batch_size, writer)
                 self.log.rows_imported = total_rows
@@ -407,7 +667,7 @@ class WarehouseTableImporter:
             self._log("Import completed successfully.")
         except Exception as e:
             self.log.status = "Failed"
-            self._log(f"Error: \n{e}")
+            self._log(f"Error:\n{frappe.get_traceback()}")
             raise e
 
     def calculate_batch_size(self) -> int:
@@ -427,8 +687,10 @@ class WarehouseTableImporter:
 
     def process_batches(self, batch_size: int, writer: WarehouseTableWriter) -> int:
         remote_table = self.remote_table
-        if self.primary_key:
-            remote_table = remote_table.order_by(self.primary_key)
+        if self.cursor_column:
+            remote_table = remote_table.order_by(
+                ibis.asc(self.cursor_column, nulls_first=True),
+            )
 
         batch_number = 0
         total_rows = 0
@@ -440,27 +702,52 @@ class WarehouseTableImporter:
 
             batch = writer.insert(batch)
 
-            batch_count = batch.count().execute()
-            total_rows += int(batch_count)
+            batch_count = int(batch.count().execute())
+            total_rows += batch_count
 
             self._log(f"Rows: {batch_count} Total Rows: {total_rows}")
 
-            if batch_count < batch_size or not self.primary_key:
+            if batch_count < batch_size or not self.cursor_column:
                 break
 
-            max_pk = batch[self.primary_key].max().execute()
-            self._log(f"Bookmark: {max_pk}")
-            remote_table = remote_table.filter(_[self.primary_key] > max_pk)
+            last_cursor = batch[self.cursor_column].max().execute()
+            self._log(f"Bookmark: {last_cursor}")
+            remote_table = remote_table.filter(_[self.cursor_column] > last_cursor)
             batch_number += 1
 
         self._log(f"Total Batches: {batch_number + 1} Total Rows: {total_rows}")
         return total_rows
 
+    def capture_outcome(self):
+        """Report how the import ended, and nothing about what it read.
+
+        The table, the source and the query stay here. Only the outcome, the
+        size and the duration travel, and the counts as buckets.
+        """
+        from insights.telemetry import capture, duration_bucket, rows_bucket
+
+        rows = self.log.rows_imported or 0
+        capture(
+            "data_store_imported",
+            outcome="ok" if self.log.status == "Completed" else "failed",
+            hit_row_limit=self.hit_row_limit(rows),
+            rows_bucket=rows_bucket(rows),
+            duration_bucket=duration_bucket(self.log.time_taken or 0),
+            resumed=self.resumed,
+        )
+
+    def hit_row_limit(self, rows: int) -> bool:
+        """An incremental run is never capped, so only a full one can reach the limit."""
+        if self.settings.sync_mode != "Full" or not self.settings.row_limit:
+            return False
+        return rows >= self.settings.row_limit
+
     def update_log(self):
+        ended_at = frappe.utils.now()
         self.log.db_set(
             {
-                "ended_at": frappe.utils.now(),
-                "time_taken": frappe.utils.time_diff_in_seconds(self.log.ended_at, self.log.started_at),
+                "ended_at": ended_at,
+                "time_taken": frappe.utils.time_diff_in_seconds(ended_at, self.log.started_at),
             },
             commit=True,
         )
@@ -474,7 +761,29 @@ class WarehouseTableImporter:
         )
         t.stored = 1
         t.last_synced_on = frappe.utils.now()
-        t.save()
+
+        if self.settings.sync_mode == "Incremental" and self.cursor_column:
+            new_bookmark = self._read_warehouse_bookmark()
+            if new_bookmark is not None:
+                t.last_sync_bookmark = str(new_bookmark)
+            self._log(f"Bookmark updated: {self.cursor_column} = {new_bookmark}")
+
+        t.save(ignore_permissions=True)
+
+    def _read_warehouse_bookmark(self):
+        """Query DuckDB for the MAX cursor value after a successful incremental import.
+
+        Reading from the warehouse (not the remote query) ensures the bookmark
+        matches what was actually committed, surviving partial failures.
+        """
+        try:
+            wh_table = insights.warehouse.db.table(
+                self.table.warehouse_table_name, database=self.table.schema
+            )
+            return wh_table[self.cursor_column].max().execute()
+        except Exception:
+            self._log("Warning: could not read bookmark from warehouse table.")
+            return None
 
     def _log(self, message: str, commit: bool = True):
         if self.last_log_time is None:
@@ -485,7 +794,6 @@ class WarehouseTableImporter:
             elapsed = current_time - self.last_log_time
             self.last_log_time = current_time
 
-        print(f"[{now()}] [{elapsed:.1f}s] {message}")
         self.log.log_output(f"[{now()}] [{elapsed:.1f}s] {message}", commit=commit)
 
 
@@ -506,3 +814,20 @@ def execute_warehouse_table_import(data_source: str, table_name: str):
     table = WarehouseTable(data_source, table_name)
     importer = WarehouseTableImporter(table)
     importer.start_import()
+
+
+def quote_identifier(name: str) -> str:
+    return '"' + name.replace('"', '""') + '"'
+
+
+def get_warehouse_schema_name(data_source: str) -> str:
+    """Return the DuckDB schema name for a given data source name."""
+    return frappe.scrub(data_source).replace(".", "_")
+
+
+def is_warehouse(backend: DuckDBBackend):
+    args = getattr(backend, "_con_args", None)
+    if args and isinstance(args, tuple) and len(args) > 0:
+        warehouse_db_path = insights.warehouse.get_db_path()
+        return args[0] == warehouse_db_path
+    return False

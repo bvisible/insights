@@ -1,5 +1,6 @@
 <script setup lang="tsx">
 import { watchDebounced } from '@vueuse/core'
+import { __ } from '../translation'
 import { Avatar, ListView } from 'frappe-ui'
 import { Plus } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
@@ -11,10 +12,6 @@ import ManageTeamDialog from '../teams/ManageTeamDialog.vue'
 import useTeamStore, { Team } from '../teams/teams'
 import SettingItem from './SettingItem.vue'
 import useSettings from './settings'
-//// Neoffice — added import. The whole file's user-facing strings are wrapped in
-//// __() (upstream hardcodes English); the French catalogue lives in
-//// insights/locale/fr.po. Keep this import when merging upstream's version.
-import { __ } from '../translation'
 
 const teamStore = useTeamStore()
 teamStore.getTeams()
@@ -29,7 +26,7 @@ watchDebounced(
 			settings.save()
 		}
 	},
-	{ debounce: 500, deep: true }
+	{ debounce: 500, deep: true },
 )
 
 const searchQuery = ref('')
@@ -38,14 +35,13 @@ const filteredTeams = computed(() => {
 		return teamStore.teams
 	}
 	return teamStore.teams.filter((team) =>
-		team.team_name.toLowerCase().includes(searchQuery.value.toLowerCase())
+		team.team_name.toLowerCase().includes(searchQuery.value.toLowerCase()),
 	)
 })
 
 const listOptions = ref({
 	columns: [
 		{
-			//// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French
 			label: __('Team Name'),
 			key: 'team_name',
 			prefix(props: any) {
@@ -64,12 +60,10 @@ const listOptions = ref({
 			showEditTeamDialog.value = true
 		},
 		emptyState: {
-			//// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French
 			title: __('No teams.'),
 			description: __('No teams to display.'),
 			button: session.user.is_admin
 				? {
-						//// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French
 						label: __('Create Team'),
 						variant: 'solid',
 						onClick: () => (showCreateTeamDialog.value = true),
@@ -87,7 +81,7 @@ const editTeam = ref<Team | null>(null)
 <template>
 	<div class="flex w-full flex-col gap-6 overflow-y-scroll p-8 px-10">
 		<!-- //// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French -->
-		<h1 class="text-xl font-semibold">{{ __("Permissions") }}</h1>
+		<h1 class="text-xl font-semibold">{{ __('Permissions') }}</h1>
 
 		<!-- //// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French -->
 		<SettingItem
@@ -105,16 +99,21 @@ const editTeam = ref<Team | null>(null)
 			<Toggle v-model="settings.doc.apply_user_permissions" />
 		</SettingItem>
 
+		<!-- //// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French -->
+		<SettingItem
+			:label="__('Allow Data Download')"
+			:description="__('Allow users to download query results as CSV or Excel. A user can download only if both this toggle is on and its export permission is granted on the query. When disabled, only admins can download data.')"
+		>
+			<Toggle v-model="settings.doc.allow_download" />
+		</SettingItem>
+
 		<div class="flex w-full flex-1 flex-col gap-3 overflow-auto">
 			<!-- //// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French -->
 			<SettingItem
 				:label="__('Teams')"
 				:description="__('Create teams to group users and manage permissions.')"
 			>
-				<!-- //// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French — the :label on this
-				     //// Button is 3 lines inside its own multi-line opening tag, where no comment
-				     //// can live; this marker on the element is the closest reachable spot (see
-				     //// NEOFFICE_FORK_MARKERS.md, "Hunks a comment cannot reach"). -->
+				<!-- //// Neoffice — __() wrapping of the :label below (upstream hardcodes English). -->
 				<Button
 					v-if="session.user.is_admin"
 					class="self-end"

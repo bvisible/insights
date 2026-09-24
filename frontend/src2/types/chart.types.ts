@@ -4,7 +4,7 @@ import { Dimension, Measure } from './query.types'
 export const AXIS_CHARTS = ['Bar', 'Line', 'Row']
 export type AxisChartType = (typeof AXIS_CHARTS)[number]
 
-export const CHARTS = ['Number', ...AXIS_CHARTS, 'Donut', 'Funnel', 'Table', 'Map', 'Bubble']
+export const CHARTS = ['Number', ...AXIS_CHARTS, 'Donut', 'Funnel', 'Table', 'Map', 'Bubble', 'Sankey']
 export type ChartType = (typeof CHARTS)[number]
 
 export type AxisChartConfig = {
@@ -31,6 +31,21 @@ export type YAxis = {
 	show_axis_label?: boolean
 	show_data_labels?: boolean
 	show_scrollbar?: boolean
+	reference_lines?: ReferenceLine[]
+}
+export type ReferenceLine = {
+	// 'y' draws a horizontal line at a measure value, 'x' a vertical line at a category/date value
+	axis?: 'x' | 'y'
+	// which value axis a 'y' line targets on a dual-axis chart; defaults to the primary (left)
+	align?: 'Left' | 'Right'
+	// a fixed position on the axis; ignored when `statistic` is set
+	value?: number | string
+	// read the line's position off the plotted rows on the axis it targets, instead of
+	// a fixed value; y lines only, since a category axis has no statistic
+	statistic?: 'average' | 'median' | 'min' | 'max' | null
+	label?: string
+	color?: string
+	dashed?: boolean
 }
 export type Series = {
 	name?: string
@@ -39,6 +54,7 @@ export type Series = {
 	type?: 'line' | 'bar'
 	align?: 'Left' | 'Right'
 	show_data_labels?: boolean
+	hide_from_chart?: boolean
 }
 export type YAxisLine = Series & {
 	series: SeriesLine[]
@@ -104,7 +120,7 @@ export type DonutChartConfig = {
 export type FunnelChartConfig = {
 	label_column: Dimension
 	value_column: Measure
-	label_position?: 'left' | 'right' | 'alternate'
+	show_percentage?: boolean
 }
 
 export type TableChartConfig = {
@@ -118,6 +134,8 @@ export type TableChartConfig = {
 	compact_numbers?: boolean
 	enable_color_scale?: boolean
 	sticky_columns?: string[]
+	column_widths?: Record<string, number>
+	text_wrap?: Record<string, boolean>
 	conditional_formatting?: FormatGroupArgs
 }
 
@@ -143,6 +161,14 @@ export type BubbleChartConfig = {
 	yAxis_refLine?: number
 }
 
+export type SankeyChartConfig = {
+	source_column: Dimension
+	target_column: Dimension
+	value_column: Measure
+	orient?: 'horizontal' | 'vertical'
+	node_align?: 'left' | 'right' | 'justify'
+}
+
 export type ChartConfig =
 	| LineChartConfig
 	| BarChartConfig
@@ -152,6 +178,7 @@ export type ChartConfig =
 	| FunnelChartConfig
 	| MapChartConfig
 	| BubbleChartConfig
+	| SankeyChartConfig
 
 export interface Suggestion {
 		region: string

@@ -6,6 +6,7 @@ execute:frappe.delete_doc('DocType', 'Query Field', ignore_missing=True)
 execute:frappe.delete_doc('DocType', 'Query Chart', ignore_missing=True)
 insights.patches.add_roles
 insights.insights.doctype.insights_query.patches.make_query_variable_value_password_field
+insights.patches.name_workbooks_as_strings
 insights.patches.normalize_workbook #6
 
 [post_model_sync]
@@ -47,23 +48,34 @@ insights.insights.doctype.insights_notebook_page.patches.replace_query_builder_w
 insights.insights.doctype.insights_query.patches.set_chart_name
 insights.insights.doctype.insights_chart.patches.convert_bar_to_row_chart
 # //// Neoffice — these two upstream patches are DISABLED (commented out, not
-# //// deleted): copy_data_sources #v4 and force_sync_tables #5 both fail on our
-# //// already-populated installs (commit 24019840, "disable two problematic
-# //// migration patches that fail on existing installs"), and one failing patch
-# //// aborts the whole `bench migrate` — the fleet stops mid-migration. Keep
-# //// them commented until they are proven on a copy of a real instance.
+# //// deleted). copy_data_sources opens with frappe.db.delete("Insights Data Source
+# //// v3"): on an install whose v3 data sources are already configured it wipes them
+# //// and rebuilds them from the legacy v2 rows. force_sync_tables re-reads the table
+# //// list of every data source and, on any error, deletes that source's table
+# //// registry. Both failed on our populated installs (commit 24019840), and one
+# //// failing patch aborts the whole `bench migrate`, so the fleet stops
+# //// mid-migration. Keep them commented until they are proven on a copy of a real
+# //// instance.
 # insights.insights.doctype.insights_data_source_v3.patches.copy_data_sources #v4
 # insights.insights.doctype.insights_table_v3.patches.force_sync_tables #5
 insights.patches.enable_data_store
 insights.insights.doctype.insights_data_source_v3.patches.set_type
+execute:frappe.db.set_single_value("Insights Settings", "apply_user_permissions", 1) #2
+insights.patches.migrate_warehouse_tables_to_schemas
+insights.patches.fix_table_link_names
+insights.patches.backfill_query_references
+execute:frappe.db.set_single_value("Insights Settings", "allow_download", 1)
+insights.patches.requalify_workbook_templates
+insights.patches.strip_default_schema_from_table_names
+insights.patches.hash_invitation_keys
+insights.patches.backfill_permission_user
 # //// Neoffice — added entry, ships with the security fix that turned the data
 # //// source secrets (connection_string, bigquery_service_account_key) into
 # //// Password fields: the fieldtype only protects what is written afterwards, so
 # //// the values already in the table have to be moved into __Auth. The module is
 # //// committed with this line (a patch listed without its .py kills bench migrate
-# //// fleet-wide). Idempotent, safe to re-run.
-# //// (drop once upstream PR the upstream PR from bvisible/insights branch
-# //// upstream/security-hardening-2026-09 is merged into frappe/insights)
+# //// fleet-wide). Idempotent, safe to re-run. Drop once frappe/insights stores
+# //// these two fields encrypted (upstream still ships them as Text/JSON).
 insights.insights.doctype.insights_data_source_v3.patches.encrypt_data_source_secrets
 # //// Neoffice — stale Admin team members and the admins they kept out
 # //// (neoffice-maintenance#372). Module committed with this line.

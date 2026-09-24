@@ -8,11 +8,14 @@ import {
 	ImageDown,
 	MoreHorizontal,
 	RefreshCcw,
+	Scroll,
 	Share2,
 	XIcon,
 } from 'lucide-vue-next'
-import { h } from 'vue'
+import { h, provide, ref } from 'vue'
 import session from '../../session'
+import { __ } from '../../translation'
+import ViewSQLDialog from '../../query/components/ViewSQLDialog.vue'
 
 const props = defineProps<{
 	chart: any
@@ -21,37 +24,45 @@ const props = defineProps<{
 	onShare: () => void
 }>()
 
+const showViewSQLDialog = ref(false)
+provide('query', props.chart.dataQuery)
+
 const moreActions = [
 	{
-		label: 'Export as PNG',
+		label: __('Export as PNG'),
 		icon: h(ImageDown, { class: 'h-3 w-3 text-gray-700', strokeWidth: 1.5 }),
 		onClick: () => props.onDownload(),
 		condition: () => !!props.chartEl,
 	},
 	{
-		label: 'Share Chart',
+		label: __('Share Chart'),
 		icon: h(Share2, { class: 'h-3 w-3 text-gray-700', strokeWidth: 1.5 }),
 		onClick: () => props.onShare(),
 		condition: () => !props.chart.doc.read_only,
 	},
 	{
-		label: 'Duplicate Chart',
+		label: __('Duplicate Chart'),
 		icon: h(CopyPlus, { class: 'h-3 w-3 text-gray-700', strokeWidth: 1.5 }),
 		onClick: () => props.chart.duplicate(),
 	},
 	{
-		label: 'Reset Options',
+		label: __('Reset Options'),
 		icon: h(XIcon, { class: 'h-3 w-3 text-gray-700', strokeWidth: 1.5 }),
 		onClick: () => props.chart.resetConfig(),
 		condition: () => !props.chart.doc.read_only,
 	},
 	{
-		label: 'Copy JSON',
+		label: __('View SQL'),
+		icon: h(Scroll, { class: 'h-3 w-3 text-gray-700', strokeWidth: 1.5 }),
+		onClick: () => (showViewSQLDialog.value = true),
+	},
+	{
+		label: __('Copy JSON'),
 		icon: h(Copy, { class: 'h-3 w-3 text-gray-700', strokeWidth: 1.5 }),
 		onClick: () => props.chart.copy(),
 	},
 	{
-		label: 'Open in Desk',
+		label: __('Open in Desk'),
 		icon: h(ExternalLink, { class: 'h-3 w-3 text-gray-700', strokeWidth: 1.5 }),
 		onClick: () => props.chart.openInDesk(),
 		condition: () => session.user.has_desk_access,
@@ -94,4 +105,6 @@ const moreActions = [
 			</Dropdown>
 		</div>
 	</div>
+
+	<ViewSQLDialog v-if="showViewSQLDialog" v-model="showViewSQLDialog" />
 </template>

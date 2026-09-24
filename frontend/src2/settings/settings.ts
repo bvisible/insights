@@ -1,5 +1,18 @@
+import { ref } from 'vue'
 import useDocumentResource from '../helpers/resource'
+import { __ } from '../translation'
 import { createToast } from '../helpers/toasts'
+
+/** Shared, because a tab inside the dialog can ask the dialog to close - the
+ * migration tab routes to a workbook, which would otherwise open behind it. */
+export const showSettingsDialog = ref(false)
+
+/** Set with `showSettingsDialog` to open the dialog on a named tab. */
+export const settingsTab = ref('')
+
+/** Which surface asked for that tab, for telemetry. Set it beside `settingsTab`;
+ * the tab reads it once and clears it. Empty means the user found the tab. */
+export const settingsOpenedFrom = ref('')
 
 let settings = undefined as Settings | undefined
 export default function useSettings() {
@@ -12,11 +25,14 @@ function makeSettings() {
 	const _settings = useDocumentResource<InsightsSettings>(doctype, doctype, {
 		initialDoc: {
 			name: '',
+			doctype,
+			owner: '',
 			enable_permissions: false,
+			allow_download: true,
 			allowed_origins: '',
 			max_records_to_sync: 10_00_000,
 			max_memory_usage: 512,
-			fiscal_year_start: '2024-04-01',
+			fiscal_year_start: '',
 			week_starts_on: 'Monday',
 			enable_data_store: false,
 			apply_user_permissions: false,
@@ -25,8 +41,8 @@ function makeSettings() {
 	})
 	_settings.onAfterSave(() =>
 		createToast({
-			title: 'Settings Updated',
-			message: 'Your settings have been updated successfully',
+			title: __('Settings Updated'),
+			message: __('Your settings have been updated successfully'),
 			variant: 'success',
 		})
 	)
@@ -38,7 +54,10 @@ type Settings = ReturnType<typeof makeSettings>
 
 type InsightsSettings = {
 	name: string
+	doctype: string
+	owner: string
 	enable_permissions: boolean
+	allow_download: boolean
 	allowed_origins: string
 	max_records_to_sync: number
 	max_memory_usage: number

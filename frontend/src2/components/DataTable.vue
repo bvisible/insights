@@ -1,25 +1,37 @@
 <script setup lang="ts">
-import { Button, Dialog, FormControl, LoadingIndicator, Rating } from 'frappe-ui'
-import { ChevronLeft, ChevronRight, Download, Plus, Search, Table2Icon } from 'lucide-vue-next'
-import { computed, nextTick, reactive, ref } from 'vue'
-import { createHeaders, formatNumber, getShortNumber } from '../helpers'
+import { watchDebounced } from '@vueuse/core'
+import { Button, LoadingIndicator } from 'frappe-ui'
+import { Plus, Search, Table2Icon } from 'lucide-vue-next'
+import { computed, nextTick, ref } from 'vue'
+import { usePagination } from '../composables/usePagination'
+import { createHeaders, formatNumber, getFormatUnits, getShortNumber } from '../helpers'
 import { FIELDTYPES } from '../helpers/constants'
-import { QueryResultColumn, QueryResultRow, SortDirection, SortOrder } from '../types/query.types'
-import DataTableColumn from './DataTableColumn.vue'
+import { getRowCurrency } from '../query/helpers'
 import {
-	applyRule,
-	applyTextRule,
 	applyDateRule,
 	applyRankRule,
+	applyRule,
+	applyTextRule,
 	cell_rules,
-	text_rules,
 	date_rules,
-	rank_rules,
 	FormatGroupArgs,
 	FormattingMode,
 	garByPercentage,
 	ragByPercentage,
+	rank_rules,
+	text_rules,
 } from '../query/components/formatting_utils'
+import { matchesFilter, parseFilterString } from '../query/helpers'
+import {
+	DataFormat,
+	QueryResultColumn,
+	QueryResultRow,
+	SortDirection,
+	SortOrder,
+} from '../types/query.types'
+import DataTableColumn from './DataTableColumn.vue'
+import DataTableFooter from './DataTableFooter.vue'
+import LazyTextInput from './LazyTextInput.vue'
 
 const props = defineProps<{
 	columns: QueryResultColumn[] | undefined
@@ -33,6 +45,7 @@ const props = defineProps<{
 	replaceNullsWithZeros?: boolean
 	compactNumbers?: boolean
 	loading?: boolean
+	filtering?: boolean
 	onExport?: Function
 	downloading?: boolean
 	formatGroup?: FormatGroupArgs
@@ -40,13 +53,24 @@ const props = defineProps<{
 	onSortChange?: (column_name: string, direction: SortDirection) => void
 	onColumnRename?: (column_name: string, new_name: string) => void
 	onDrilldown?: (column: QueryResultColumn, row: QueryResultRow) => void
-	stickyColumns?: string[] // List of column names to make sticky
+	stickyColumns?: string[]
+	columnWidths?: Record<string, number>
+	textWrap?: Record<string, boolean>
+	columnFormats?: Record<string, DataFormat>
+	pageSize?: number
+	displayPageSize?: number
+	totalRowCount?: number
+	onPageChange?: (page: number) => void
+	currentPage?: number
+	onFetchCount?: () => Promise<void> | void
+	onFilterChange?: (filters: Record<string, string>) => void
 }>()
 
 const headers = computed(() => {
 	if (!props.columns?.length) return []
 	return createHeaders(props.columns)
 })
+
 const columnsMeta = computed(() => {
 	if (!props.columns || !props.rows) return new Map()
 
@@ -58,17 +82,6 @@ const columnsMeta = computed(() => {
 		)
 		const metadata = {
 			isNumber: FIELDTYPES.NUMBER.includes(col.type) || hasColorScaleFormatting,
-			isStarRating: false,
-		}
-
-		const values = props.rows!.map((row) => row[name])
-
-		// Check if it's a star rating column
-		if (
-			metadata.isNumber &&
-			(col.name.toLowerCase().includes('rating') || col.name.toLowerCase().includes('stars'))
-		) {
-			metadata.isStarRating = values.every((val) => val >= 0 && val <= 1)
 		}
 
 		meta.set(name, metadata)
@@ -77,14 +90,21 @@ const columnsMeta = computed(() => {
 })
 
 const isNumberColumn = (col: string) => columnsMeta.value.get(col)?.isNumber
-const isStarRating = (col: string) => columnsMeta.value.get(col)?.isStarRating
-const isUrl = (value: any): boolean => typeof value === 'string' && value.startsWith('http')
+const isUrl = (value: any): boolean => {
+	if (typeof value !== 'string') return false
+
+	try {
+		const url = new URL(value.trim())
+		return url.protocol === 'http:' || url.protocol === 'https:'
+	} catch {
+		return false
+	}
+}
 
 const $header = ref<HTMLElement>()
 function getColumnWidth(column: string) {
 	const cell = $header.value?.querySelector(`td[data-column-name="${column}"]`)
 	if (cell && 'offsetWidth' in cell) {
-		console.log(`Width of column ${column}:`, cell.offsetWidth)
 		return cell.offsetWidth as number
 	}
 	return 200
@@ -121,46 +141,51 @@ const getStickyColumnStyle = (column: string) => {
 	}
 }
 
+const getColumnWidthStyle = (column: string) => {
+	const width = props.columnWidths?.[column]
+	if (width) {
+		return {
+			width: `${width}px`,
+			minWidth: `${width}px`,
+			maxWidth: `${width}px`,
+		}
+	}
+	return {
+		maxWidth: '400px',
+	}
+}
+
+const getTextWrapClass = (column: string) => {
+	if (props.textWrap?.[column]) return ''
+	return 'truncate'
+}
+
 const filterPerColumn = ref<Record<string, string>>({})
 const visibleRows = computed(() => {
 	const columns = props.columns
 	const rows = props.rows
 	if (!columns?.length || !rows?.length || !props.showFilterRow) return rows
 
+	if (props.onFilterChange) return rows
+
 	const filters = filterPerColumn.value
 	return rows.filter((row) => {
-		return Object.entries(filters).every(([col, filter]) => {
-			if (!filter) return true
-			const isNumber = isNumberColumn(col)
-			const value = row[col]
-			return applyFilter(value, isNumber, filter)
+		return Object.entries(filters).every(([col, filterStr]) => {
+			if (!filterStr) return true
+			const parsed = parseFilterString(filterStr)
+			if (!parsed) return true
+			return matchesFilter(row[col], parsed)
 		})
 	})
 })
 
-function applyFilter(value: any, isNumber: boolean, filter: string) {
-	if (isNumber) {
-		const operator = ['>', '<', '>=', '<=', '=', '!='].find((op) => filter.startsWith(op))
-		if (operator) {
-			const num = Number(filter.replace(operator, ''))
-			switch (operator) {
-				case '>':
-					return Number(value) > num
-				case '<':
-					return Number(value) < num
-				case '>=':
-					return Number(value) >= num
-				case '<=':
-					return Number(value) <= num
-				case '=':
-					return Number(value) === num
-				case '!=':
-					return Number(value) !== num
-			}
-		}
-	}
-	return String(value).toLowerCase().includes(filter.toLowerCase())
-}
+watchDebounced(
+	filterPerColumn,
+	(filters) => {
+		props.onFilterChange?.(filters)
+	},
+	{ deep: true, debounce: 300 },
+)
 
 const totalPerColumn = computed(() => {
 	const columns = props.columns
@@ -198,40 +223,23 @@ const totalColumnTotal = computed(() => {
 	return Object.values(totalPerColumn.value).reduce((acc, val) => acc + val, 0)
 })
 
-const page = reactive({
-	current: 1,
-	size: 100,
-	total: 1,
-	startIndex: 0,
-	endIndex: 99,
-	next() {
-		if (page.current < page.total) {
-			page.current++
-		}
-	},
-	prev() {
-		if (page.current > 1) {
-			page.current--
-		}
-	},
+const pagination = usePagination({
+	pageSize: computed(() => props.pageSize ?? 100),
+	displayPageSize: computed(() => props.displayPageSize ?? 100),
+	rowCount: computed(() => visibleRows.value?.length ?? 0),
+	totalRowCount: computed(() => props.totalRowCount),
+	currentPage: computed(() => props.currentPage),
+	onPageChange: props.onPageChange,
+	enabled: computed(() => Boolean(props.enablePagination)),
 })
-// @ts-ignore
-page.total = computed(() => {
-	if (!visibleRows.value?.length) return 1
-	return Math.ceil(visibleRows.value.length / page.size)
-})
-// @ts-ignore
-page.startIndex = computed(() => (page.current - 1) * page.size)
-// @ts-ignore
-page.endIndex = computed(() => Math.min(page.current * page.size, visibleRows.value?.length || 0))
 
 const colorByPercentage = {
 	0: 'bg-white text-gray-900',
-	10: 'bg-blue-100 text-blue-900',
-	30: 'bg-blue-200 text-blue-900',
-	60: 'bg-blue-300 text-blue-900',
-	90: 'bg-blue-400 text-blue-900',
-	100: 'bg-blue-500 text-white',
+	10: 'bg-[#338AD8]/10 text-gray-900',
+	30: 'bg-[#338AD8]/30 text-gray-900',
+	60: 'bg-[#338AD8]/60 text-gray-900',
+	90: 'bg-[#338AD8]/90 text-white',
+	100: 'bg-[#338AD8] text-white',
 }
 
 const colorByValues = computed(() => {
@@ -268,42 +276,43 @@ const colorByValues = computed(() => {
 })
 
 const formattingRulesByColumn = computed(() => {
-    const { formats } = props.formatGroup || {}
-    const columns = props.columns || []
-    const result: Record<string, FormattingMode[]> = {}
+	const { formats } = props.formatGroup || {}
+	const columns = props.columns || []
+	const result: Record<string, FormattingMode[]> = {}
 
-    if (!formats?.length) return result
+	if (!formats?.length) return result
 
-    // get the measure part of a pivot column
-    const getMeasureName = (name: string) => name.includes('___') ? name.split('___').pop() : name
+	// ibis generates pivot columns as {measure}___{dim_value1}___{dim_value2}...
+	// so the measure name is always the first part
+	const getMeasureName = (name: string) => (name.includes('___') ? name.split('___')[0] : name)
 
-    formats.forEach((format) => {
-        const target = 'column' in format ? format.column?.column_name : null
-        if (!target) return
+	formats.forEach((format) => {
+		const target = 'column' in format ? format.column?.column_name : null
+		if (!target) return
 
-        // get matches (direct or pivot suffix)
-        const matchedColumns = columns.filter(col => {
-            const measureName = getMeasureName(col.name)
-            return measureName === target || col.name.endsWith(`___${target}`)
-        })
+		// get matches (direct or pivot suffix)
+		const matchedColumns = columns.filter((col) => {
+			const measureName = getMeasureName(col.name)
+			return measureName === target || col.name.endsWith(`___${target}`)
+		})
 
-        if (matchedColumns.length > 0) {
-            matchedColumns.forEach(col => {
-                (result[col.name] ??= []).push(format)
-            })
-        } else {
-            // Only apply to numeric value columns
-            // We skip index 0 since its the dimension/row header
-            columns.forEach((col, idx) => {
-                const isNumeric = FIELDTYPES.NUMBER.includes(col.type)
-                if (idx > 0 && isNumeric) {
-                    (result[col.name] ??= []).push(format)
-                }
-            })
-        }
-    })
+		if (matchedColumns.length > 0) {
+			matchedColumns.forEach((col) => {
+				;(result[col.name] ??= []).push(format)
+			})
+		} else {
+			// Only apply to numeric value columns
+			// We skip index 0 since its the dimension/row header
+			columns.forEach((col, idx) => {
+				const isNumeric = FIELDTYPES.NUMBER.includes(col.type)
+				if (idx > 0 && isNumeric) {
+					;(result[col.name] ??= []).push(format)
+				}
+			})
+		}
+	})
 
-    return result
+	return result
 })
 
 function getColorClass(colorName: string): string {
@@ -322,14 +331,13 @@ function getColorClass(colorName: string): string {
 }
 
 const getColumnMinMax = (columnName: string) => {
-
 	const colorScaleFormats = formattingRulesByColumn.value[columnName]?.filter(
-		(rule) => rule.mode === 'color_scale'
+		(rule) => rule.mode === 'color_scale',
 	)
 
 	if (!colorScaleFormats?.length) {
-
-		const values = props.rows?.map((row) => Number(row[columnName])).filter((val) => !isNaN(val)) || []
+		const values =
+			props.rows?.map((row) => Number(row[columnName])).filter((val) => !isNaN(val)) || []
 		return {
 			min: Math.min(...values),
 			max: Math.max(...values),
@@ -351,22 +359,24 @@ const getColumnMinMax = (columnName: string) => {
 		// single-pivot: [Dimension] (eg: Paid, Unpaid)
 		// multi-pivot:  [Dim1]___[Dim2] (eg: INR___Draft, USD___Paid)
 		if (allFormattedColumns.length > 1) {
-
 			if (columnName.includes('___')) {
 				const parts = columnName.split('___')
 				const measureName = parts[parts.length - 1]
 
-				const hasMultiValuePivot = allFormattedColumns.some(col => col.endsWith('___' + measureName))
+				const hasMultiValuePivot = allFormattedColumns.some((col) =>
+					col.endsWith('___' + measureName),
+				)
 
 				if (hasMultiValuePivot) {
 					// multi-value pivot: only include columns ending with the same measure
-					columnsToConsider = allFormattedColumns.filter((col) => col.endsWith('___' + measureName))
+					columnsToConsider = allFormattedColumns.filter((col) =>
+						col.endsWith('___' + measureName),
+					)
 				} else {
 					// multi-column pivot: all formatted columns represent the same measure
 					columnsToConsider = allFormattedColumns
 				}
 			} else {
-
 				columnsToConsider = allFormattedColumns
 			}
 		}
@@ -374,7 +384,8 @@ const getColumnMinMax = (columnName: string) => {
 
 	const values: number[] = []
 	columnsToConsider.forEach((col) => {
-		const colValues = props.rows?.map((row) => Number(row[col])).filter((val) => !isNaN(val)) || []
+		const colValues =
+			props.rows?.map((row) => Number(row[col])).filter((val) => !isNaN(val)) || []
 		values.push(...colValues)
 	})
 
@@ -514,12 +525,34 @@ function getCellStyleClass(colName: string, val: any): string {
 	return ''
 }
 
-function _formatNumber(value: any) {
+// a total over rows in different currencies is an amount in none, so it prints bare
+const currencyPerColumn = computed(() => {
+	const codes: Record<string, string | null | undefined> = {}
+	const rows = visibleRows.value || []
+	for (const [name, format] of Object.entries(props.columnFormats || {})) {
+		if (format !== 'currency') continue
+		const seen = new Set(rows.map((row) => getRowCurrency(row, name)))
+		codes[name] = seen.size === 1 ? [...seen][0] : null
+	}
+	return codes
+})
+
+function _formatNumber(value: any, columnName?: string, row?: any) {
 	const isNull = value === null || value === undefined
 	if (isNull) {
 		return props.replaceNullsWithZeros ? 0 : 'null'
 	}
-	return props.compactNumbers ? getShortNumber(value) : formatNumber(value)
+	const { scale, prefix, suffix } = getFormatUnits(
+		columnName ? props.columnFormats?.[columnName] : undefined,
+		columnName
+			? row
+				? getRowCurrency(row, columnName)
+				: currencyPerColumn.value[columnName]
+			: undefined,
+	)
+	const scaled = value * scale
+	const printed = props.compactNumbers ? getShortNumber(scaled) : formatNumber(scaled)
+	return `${prefix}${printed}${suffix}`
 }
 
 const showNewColumn = ref(false)
@@ -561,7 +594,10 @@ function toggleNewColumn() {
 									: 'text-left',
 								isStickyColumn(header.column.name) ? 'sticky bg-gray-50' : '',
 							]"
-							:style="getStickyColumnStyle(header.column.name)"
+							:style="{
+								...getStickyColumnStyle(header.column.name),
+								...getColumnWidthStyle(header.column.name),
+							}"
 							:colspan="header.colspan"
 							:data-column-name="header.column.name"
 						>
@@ -632,18 +668,28 @@ function toggleNewColumn() {
 							:key="idx"
 							class="h-8 border-b border-r p-1"
 							:class="isStickyColumn(column.name) ? 'sticky bg-gray-50' : ''"
-							:style="getStickyColumnStyle(column.name)"
+							:style="{
+								...getStickyColumnStyle(column.name),
+								...getColumnWidthStyle(column.name),
+							}"
 						>
-							<FormControl
-								type="text"
-								v-model="filterPerColumn[column.name]"
-								autocomplete="off"
+							<LazyTextInput
+								:model-value="filterPerColumn[column.name]"
+								@update:model-value="
+									(value) => (filterPerColumn[column.name] = value)
+								"
 								class="[&_input]:h-6 [&_input]:bg-gray-200/80"
 							>
 								<template #prefix>
-									<Search class="h-4 w-4 text-gray-500" stroke-width="1.5" />
+									<Search class="size-3.5 text-gray-500" :stroke-width="1.5" />
 								</template>
-							</FormControl>
+								<template #suffix>
+									<LoadingIndicator
+										v-if="props.loading || props.filtering"
+										class="size-3.5 text-gray-500"
+									/>
+								</template>
+							</LazyTextInput>
 						</td>
 						<td
 							v-if="props.showRowTotals"
@@ -654,9 +700,16 @@ function toggleNewColumn() {
 						</td>
 					</tr>
 				</thead>
-				<tbody>
+				<tbody
+					:class="
+						props.filtering ? 'opacity-60 transition-opacity' : 'transition-opacity'
+					"
+				>
 					<tr
-						v-for="(row, idx) in visibleRows?.slice(page.startIndex, page.endIndex)"
+						v-for="(row, idx) in visibleRows?.slice(
+							pagination.startIndex.value,
+							pagination.endIndex.value,
+						)"
 						:key="idx"
 					>
 						<td
@@ -664,13 +717,14 @@ function toggleNewColumn() {
 							width="1px"
 							height="30px"
 						>
-							{{ idx + page.startIndex + 1 }}
+							{{ idx + pagination.rowDisplayOffset.value + 1 }}
 						</td>
 
 						<td
 							v-for="col in props.columns"
-							class="h-8 max-w-[24rem] truncate border-b border-r px-3 text-gray-800"
+							class="h-8 border-b border-r px-3 text-gray-800 leading-5 py-1.5"
 							:class="[
+								getTextWrapClass(col.name),
 								isNumberColumn(col.name) ? 'tnum text-right' : 'text-left',
 								props.enableColorScale && isNumberColumn(col.name)
 									? colorByValues[row[col.name]]
@@ -681,15 +735,15 @@ function toggleNewColumn() {
 								getCellStyleClass(col.name, row[col.name]),
 								isStickyColumn(col.name) ? 'sticky bg-white' : '',
 							]"
-							:style="getStickyColumnStyle(col.name)"
+							:style="{
+								...getStickyColumnStyle(col.name),
+								...getColumnWidthStyle(col.name),
+							}"
 							height="30px"
 							@dblclick="isNumberColumn(col.name) && props.onDrilldown?.(col, row)"
 						>
-							<template v-if="isStarRating(col.name)">
-								<Rating :modelValue="row[col.name] * 5" :readonly="true" />
-							</template>
-							<template v-else-if="isNumberColumn(col.name)">
-								{{ _formatNumber(row[col.name]) }}
+							<template v-if="isNumberColumn(col.name)">
+								{{ _formatNumber(row[col.name], col.name, row) }}
 							</template>
 							<template v-else-if="isUrl(row[col.name])">
 								<a :href="row[col.name]" target="_blank" class="underline">
@@ -724,11 +778,14 @@ function toggleNewColumn() {
 								isNumberColumn(col.name) ? 'tnum text-right' : 'text-left',
 								isStickyColumn(col.name) ? 'sticky bg-white' : '',
 							]"
-							:style="getStickyColumnStyle(col.name)"
+							:style="{
+								...getStickyColumnStyle(col.name),
+								...getColumnWidthStyle(col.name),
+							}"
 						>
 							{{
 								isNumberColumn(col.name)
-									? _formatNumber(totalPerColumn[col.name])
+									? _formatNumber(totalPerColumn[col.name], col.name)
 									: ''
 							}}
 						</td>
@@ -746,45 +803,20 @@ function toggleNewColumn() {
 			</table>
 		</div>
 		<slot name="footer">
-			<div class="flex flex-shrink-0 items-center justify-between border-t px-2 py-1">
-				<slot name="footer-left">
-					<div></div>
-				</slot>
-				<slot name="footer-right">
-					<div class="flex items-center gap-2">
-						<div
-							v-if="props.enablePagination && visibleRows?.length && page.total > 1"
-							class="flex flex-shrink-0 items-center justify-end gap-2"
-						>
-							<p class="tnum text-sm text-gray-600">
-								{{ page.startIndex + 1 }} - {{ page.endIndex }} of
-								{{ visibleRows.length }}
-							</p>
-
-							<div class="flex gap-2">
-								<Button
-									variant="ghost"
-									@click="page.prev"
-									:disabled="page.current === 1"
-								>
-									<ChevronLeft class="h-4 w-4 text-gray-700" stroke-width="1.5" />
-								</Button>
-								<Button
-									variant="ghost"
-									@click="page.next"
-									:disabled="page.current === page.total"
-								>
-									<ChevronRight
-										class="h-4 w-4 text-gray-700"
-										stroke-width="1.5"
-									/>
-								</Button>
-							</div>
-						</div>
-						<slot name="footer-right-actions"></slot>
-					</div>
-				</slot>
-			</div>
+			<DataTableFooter
+				:pagination="props.enablePagination ? pagination : undefined"
+				:total-row-count="props.totalRowCount"
+				:on-fetch-count="props.onFetchCount"
+				@prev="pagination.prev"
+				@next="pagination.next"
+			>
+				<template #left>
+					<slot name="footer-left" />
+				</template>
+				<template #actions>
+					<slot name="footer-right-actions" />
+				</template>
+			</DataTableFooter>
 		</slot>
 	</div>
 
@@ -796,9 +828,9 @@ function toggleNewColumn() {
 	</div>
 
 	<div
-		v-if="props.loading"
-		class="absolute top-10 flex h-[calc(100%-2rem)] w-full items-center justify-center rounded bg-white/30 backdrop-blur-sm"
+		v-if="props.loading && !props.filtering"
+		class="absolute top-10 flex h-[calc(100%-2.5rem)] rounded-b w-full items-center justify-center bg-white/30 backdrop-blur-sm"
 	>
-		<LoadingIndicator class="h-8 w-8 text-gray-700" />
+		<LoadingIndicator class="h-5 w-5 text-gray-500" />
 	</div>
 </template>

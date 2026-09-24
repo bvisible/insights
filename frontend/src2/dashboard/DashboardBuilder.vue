@@ -3,13 +3,14 @@ import { useStorage, useWindowSize } from '@vueuse/core'
 import { Edit3, RefreshCcw, Share2 } from 'lucide-vue-next'
 import { computed, provide, ref, watchEffect } from 'vue'
 import ContentEditable from '../components/ContentEditable.vue'
-import { safeJSONParse, waitUntil } from '../helpers'
+import { downloadImage, safeJSONParse, waitUntil } from '../helpers'
 import { WorkbookChart, WorkbookQuery } from '../types/workbook.types'
 import useDashboard from './dashboard'
 import DashboardChartSelectorDialog from './DashboardChartSelectorDialog.vue'
 import DashboardItem from './DashboardItem.vue'
 import DashboardShareDialog from './DashboardShareDialog.vue'
 import VueGridLayout from './VueGridLayout.vue'
+import { __ } from '../translation'
 
 const props = defineProps<{
 	dashboard_name: string
@@ -50,12 +51,18 @@ function onDrop(event: DragEvent) {
 	if (!dashboard.editing) {
 		dashboard.editing = true
 	}
-	dashboard.addChart([chart])
+	dashboard.addChart([chart], 'drag')
 }
 
 const showShareDialog = ref(false)
 
 const verticalCompact = useStorage('dashboard_vertical_compact', true)
+
+const dashboardContainer = ref<HTMLElement | null>(null)
+async function downloadDashboardImage() {
+	if (!dashboardContainer.value) return
+	await downloadImage(dashboardContainer.value, `${dashboard.doc.title}.png`)
+}
 </script>
 
 <template>
@@ -64,7 +71,9 @@ const verticalCompact = useStorage('dashboard_vertical_compact', true)
 			<div class="flex items-center justify-between p-4 pb-3">
 				<ContentEditable
 					class="cursor-text rounded-sm text-lg font-semibold !text-gray-800 focus:ring-2 focus:ring-gray-700 focus:ring-offset-4"
-					v-model="dashboard.doc.title"
+					:modelValue="dashboard.doc.title"
+					@returned="dashboard.doc.title = $event"
+					@blur="dashboard.doc.title = $event"
 					placeholder="Untitled Dashboard"
 				></ContentEditable>
 				<div class="flex gap-2">
@@ -139,20 +148,26 @@ const verticalCompact = useStorage('dashboard_vertical_compact', true)
 						:button="{ icon: 'more-horizontal', variant: 'outline' }"
 						:options="[
 							{
-								label: 'Force Refresh',
+								label: __('Force Refresh'),
 								icon: RefreshCcw,
 								onClick: () => dashboard.refresh(true),
 							},
+							{
+								label: __('Export as PNG'),
+								variant: 'outline',
+								icon: 'download',
+								onClick: downloadDashboardImage,
+							},
 							dashboard.editing
 								? {
-										label: 'Compact Layout',
+										label: __('Compact Layout'),
 										icon: verticalCompact ? 'check-square' : 'square',
 										onClick: () => (verticalCompact = !verticalCompact),
 								  }
 								: null,
 							dashboard.editing
 								? {
-										label: 'Reset Layout',
+										label: __('Reset Layout'),
 										icon: 'refresh-ccw',
 										onClick: () => (
 											dashboard.discard(), (dashboard.editing = false)
@@ -163,7 +178,12 @@ const verticalCompact = useStorage('dashboard_vertical_compact', true)
 					/>
 				</div>
 			</div>
-			<div class="flex-1 overflow-y-auto p-2 pt-0" @dragover="onDragOver" @drop="onDrop">
+			<div
+				ref="dashboardContainer"
+				class="flex-1 overflow-y-auto p-2 pt-0"
+				@dragover="onDragOver"
+				@drop="onDrop"
+			>
 				<VueGridLayout
 					v-if="dashboard.doc.items.length > 0"
 					class="h-fit w-full"

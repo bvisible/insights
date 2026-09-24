@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 
+import os
 import re
 from contextlib import contextmanager
 
@@ -16,6 +17,8 @@ from insights.insights.doctype.insights_table_link_v3.insights_table_link_v3 imp
 from insights.insights.doctype.insights_table_v3.insights_table_v3 import (
     InsightsTablev3,
 )
+from insights.insights.doctype.insights_table_v3.table_rename import rename_tables
+from insights.telemetry import capture, error_kind
 
 from .connectors.bigquery import get_bigquery_connection
 from .connectors.clickhouse import get_clickhouse_connection
@@ -35,6 +38,11 @@ from .connectors.sqlite import get_sqlite_connection
 
 class DataSourceConnectionError(frappe.ValidationError):
     pass
+
+
+def source_type(database_type: str | None, is_site_db: bool = False) -> str:
+    """The value `docs/telemetry.md` puts on a source's `type`."""
+    return "site_db" if is_site_db else (database_type or "unknown").lower()
 
 
 class InsightsDataSourceDocument:
@@ -78,16 +86,18 @@ class InsightsDataSourceDocument:
             }
         )
 
+    def after_insert(self):
+        if not self.is_site_db:
+            capture("data_source_created", type=self.source_type, ssl=bool(self.use_ssl))
+
     def on_update(self):
         if self.type == "REST API":
             self.db_set(
                 {
                     "database_type": "DuckDB",
                     "database_name": None,  # this should never be used
-                    "schema": self.name.replace(".", "_"),
                 }
             )
-            insights.warehouse.create_database(self.schema)
 
         if self.is_site_db:
             self.db_set("is_frappe_db", 1)
@@ -135,6 +145,7 @@ class InsightsDataSourceDocument:
                 or self.host != doc_before.host
                 or self.port != doc_before.port
                 or self.use_ssl != doc_before.use_ssl
+                or self.ssl_ca != doc_before.ssl_ca
             )
 
     def on_trash(self):
@@ -223,8 +234,8 @@ class InsightsDataSourcev3(InsightsDataSourceDocument, Document):
         # //// frappe.client.get_list), and the annotations have to follow. Regenerating
         # //// this block yields the same two lines, so this marker may be swept away;
         # //// the JSON stays the source of truth.
-        # //// (drop once upstream PR the upstream PR from bvisible/insights branch
-# //// upstream/security-hardening-2026-09 is merged into frappe/insights)
+        # //// (drop once frappe/insights ships the same fix; it is prepared on our branch
+        # //// upstream/security-hardening-2026-09, not proposed upstream yet)
         bigquery_service_account_key: DF.Password | None
         connection_string: DF.Password | None
         database_name: DF.Data | None
@@ -238,12 +249,35 @@ class InsightsDataSourcev3(InsightsDataSourceDocument, Document):
         password: DF.Password | None
         port: DF.Int
         schema: DF.Data | None
+        ssl_ca: DF.SmallText | None
         status: DF.Literal["Inactive", "Active"]
         title: DF.Data
         type: DF.Literal["Database", "REST API"]
         use_ssl: DF.Check
         username: DF.Data | None
     # end: auto-generated types
+
+    def throw_connection_error(self, error: Exception):
+        """Report a failed connection without repeating what the driver said.
+
+        A driver names the host it could not reach, the account it was refused
+        as, and — when the source is configured by connection string — the
+        password inside it. Anyone who may edit the data source has already
+        seen all three, so they read the driver's own words. Everyone else,
+        including a Guest running a published query, gets the fact and nothing
+        else. The detail stays in the Error Log either way.
+        """
+        frappe.log_error(title=f"Failed to connect to '{self.title}'")
+        may_configure = frappe.has_permission(self.doctype, "write", self)
+        frappe.throw(
+            title="Connection Error",
+            msg=(
+                f"There was an error connecting to '{self.title}' data source: {error!s}"
+                if may_configure
+                else f"Could not connect to the '{self.title}' data source."
+            ),
+            exc=DataSourceConnectionError,
+        )
 
     def _get_ibis_backend(self) -> BaseBackend:
         if self.name in insights.db_connections:
@@ -252,26 +286,59 @@ class InsightsDataSourcev3(InsightsDataSourceDocument, Document):
         try:
             db: BaseBackend = self._get_db_connection()
         except Exception as e:
-            frappe.throw(
-                title="Connection Error",
-                msg=f"There was an error connecting to '{self.title}' data source: {e!s}",
-                exc=DataSourceConnectionError,
-            )
+            self.throw_connection_error(e)
 
         if self.database_type == "MariaDB":
             db.raw_sql("SET SESSION time_zone='+00:00'")
             db.raw_sql("SET collation_connection = 'utf8mb4_unicode_ci'")
-            MAX_STATEMENT_TIMEOUT = (
-                frappe.db.get_single_value("Insights Settings", "max_execution_time", cache=True) or 180
+            try:
+                db.raw_sql("SET SESSION tx_read_only = TRUE")
+            except Exception:
+                db.raw_sql("SET SESSION TRANSACTION_READ_ONLY = 1")
+
+            from insights.insights.doctype.insights_settings.insights_settings import (
+                get_max_execution_time,
             )
+
             ## Todo: Permanent fix for this
             try:
-                db.raw_sql(f"SET MAX_STATEMENT_TIME={MAX_STATEMENT_TIMEOUT}")
+                db.raw_sql(f"SET MAX_STATEMENT_TIME={get_max_execution_time()}")
             except Exception:
                 pass
 
         insights.db_connections[self.name] = db
         return db
+
+    @contextmanager
+    def write_connection(self):
+        """Safely yield a writable DuckDB connection for this data source.
+
+        Evicts the cached read-only connection, opens a write connection with
+        access to private files, then disconnects on exit so the read
+        connection is lazily re-opened cleanly.
+
+        Only supported for local DuckDB data sources.
+        """
+        if self.database_type != "DuckDB" or (self.database_name or "").startswith("http"):
+            raise NotImplementedError(
+                f"write_connection() is only supported for local DuckDB data sources, not '{self.database_type}'"
+            )
+
+        from frappe.utils import get_files_path
+
+        from .connectors.duckdb import get_duckdb_path, local_duckdb_write_connection
+
+        path = get_duckdb_path(self)
+        private_files_path = os.path.realpath(get_files_path(is_private=1))
+        with local_duckdb_write_connection(
+            path,
+            cache_key=self.name,
+            allowed_dir=private_files_path,
+        ) as db:
+            yield db
+
+    def get_sqlglot_dialect(self) -> str | None:
+        return db_type_to_sqlglot_dialect(self.database_type)
 
     def _get_db_connection(self) -> BaseBackend:
         if self.is_site_db:
@@ -297,6 +364,54 @@ class InsightsDataSourcev3(InsightsDataSourceDocument, Document):
 
         frappe.throw(f"Unsupported database type: {self.database_type}")
 
+    def get_postgres_schemas(self) -> list[str]:
+        """Schemas this data source reads from, as a comma separated list in `schema`."""
+        schemas = [s.strip() for s in (self.schema or "").split(",") if s.strip()]
+        return schemas or ["public"]
+
+    def qualify_table_names(self) -> bool:
+        """Whether table names should carry a `<schema>.` prefix.
+
+        Only useful when the data source spans more than one schema — with a single schema
+        there is nothing to disambiguate and the prefix just leaks into the UI and breaks the
+        table -> doctype mapping for frappe databases (frappe/insights#1195).
+        """
+        return self.database_type == "PostgreSQL" and len(self.get_postgres_schemas()) > 1
+
+    def format_table_name(self, table: str, schema: str | None = None) -> str:
+        """Name `table` the way `get_table_list` does, so it matches `Insights Table v3`.
+
+        `schema` defaults to the first one configured, which is where a frappe database
+        keeps its tables.
+        """
+        if not self.qualify_table_names():
+            return table
+        return f"{schema or self.get_postgres_schemas()[0]}.{table}"
+
+    def split_table_name(self, table_name: str) -> tuple[str, str]:
+        """Resolve `(schema, table)` for a postgres table name — inverse of `format_table_name`.
+
+        Names are only qualified when the data source spans multiple schemas, but names
+        stored before that was the case may still carry the prefix — so accept both.
+        """
+        schemas = self.get_postgres_schemas()
+        schema, separator, table = table_name.partition(".")
+        if separator and schema in schemas:
+            return schema, table
+        return schemas[0], table_name
+
+    def table_identity(self, table_name: str) -> str:
+        """Name the remote table `table_name` points at, free of the spelling of the day.
+
+        `format_table_name` answers differently once the number of configured schemas
+        changes, so the stored name is a spelling, not an identity. Matching the remote
+        list against stored spellings makes one table look like two (frappe/insights#1371).
+        """
+        if self.database_type != "PostgreSQL":
+            return table_name
+        schema, table = self.split_table_name(table_name)
+        return f"{schema}.{table}"
+
     def get_table_list(self):
         db = self._get_ibis_backend()
 
@@ -311,42 +426,46 @@ class InsightsDataSourcev3(InsightsDataSourceDocument, Document):
             return db.list_tables(database=self.schema)
 
         if self.database_type == "PostgreSQL":
-            schema = self.schema or "public"
-            schemas = schema.split(",")
             tables = []
-            for schema in schemas:
+            for schema in self.get_postgres_schemas():
                 schema_tables = db.list_tables(database=(database_name, schema))
-                schema_tables = [f"{schema}.{table}" for table in schema_tables]
-                tables.extend(schema_tables)
+                tables.extend(self.format_table_name(table, schema) for table in schema_tables)
             return tables
 
         contains_special_chars = re.search(r"[^a-zA-Z0-9_]", database_name)
         if not contains_special_chars:
             return db.list_tables()
 
-        quoted_db_name = f"{db.dialect.QUOTE_START}{database_name}{db.dialect.QUOTE_END}"
-        return db.list_tables(database=quoted_db_name)
+        return db.list_tables(database=database_name)
+
+    @property
+    def source_type(self):
+        return source_type(self.database_type, self.is_site_db)
 
     @frappe.whitelist()
-    def test_connection(self, raise_exception=False):
+    def test_connection(self, raise_exception: bool | None = False):
+        """Reach the source once and report whether it answered.
+
+        Every test arrives here, the button and the save alike, so the outcome
+        is counted once. What the driver said stays here. Only the kind of
+        failure travels. The message and the host it names do not.
+        """
+        try:
+            self.attempt_connection()
+        except Exception as e:
+            capture("data_source_tested", type=self.source_type, ok=False, error_kind=error_kind(e))
+            if raise_exception:
+                raise e
+            return
+
+        capture("data_source_tested", type=self.source_type, ok=True)
+        return True
+
+    def attempt_connection(self):
         if self.type == "REST API":
-            return self.test_api_connection(raise_exception)
-
-        try:
+            self.get_api_client().test_connection()
+        else:
             self.get_table_list()
-            return True
-        except Exception as e:
-            if raise_exception:
-                raise e
-
-    def test_api_connection(self, raise_exception=False):
-        client = self.get_api_client()
-        try:
-            client.test_connection()
-            return True
-        except Exception as e:
-            if raise_exception:
-                raise e
 
     def get_api_client(self):
         if self.type != "REST API":
@@ -370,21 +489,47 @@ class InsightsDataSourcev3(InsightsDataSourceDocument, Document):
                 "Insights Table v3",
                 {"data_source": self.name},
             )
-
-        new_tables = set(remote_tables)
-        if not force:
-            existing_tables = frappe.get_all(
-                "Insights Table v3",
-                {"data_source": self.name},
-                pluck="table",
-            )
-            new_tables = set(remote_tables) - set(existing_tables)
-
-        if not new_tables:
+            InsightsTablev3.bulk_create(self.name, list(set(remote_tables)))
+            self.update_table_links(force)
             return
 
+        new_tables, renames = self.reconcile_table_names(remote_tables)
+        if not new_tables and not renames:
+            return
+
+        rename_tables(self.name, renames)
         InsightsTablev3.bulk_create(self.name, list(new_tables))
         self.update_table_links(force)
+
+    def reconcile_table_names(self, remote_tables: list[str]) -> tuple[set[str], dict[str, str]]:
+        """Split the remote list into tables to create and stored names to re-spell.
+
+        A record already exists for a remote table whenever some stored name has the same
+        `table_identity`. That name may not be the one `get_table_list` reports today, so
+        the record is renamed. A second record would import the same table a second time.
+        """
+        stored_names = frappe.get_all(
+            "Insights Table v3",
+            {"data_source": self.name},
+            pluck="table",
+        )
+
+        stored_by_identity = {}
+        for name in stored_names:
+            stored_by_identity.setdefault(self.table_identity(name), []).append(name)
+
+        new_tables = set()
+        renames = {}
+        for remote in set(remote_tables):
+            matches = stored_by_identity.get(self.table_identity(remote))
+            if not matches:
+                new_tables.add(remote)
+                continue
+            for stored in matches:
+                if stored != remote:
+                    renames[stored] = remote
+
+        return new_tables, renames
 
     def update_table_links(self, force=False):
         links = []
@@ -408,9 +553,11 @@ class InsightsDataSourcev3(InsightsDataSourceDocument, Document):
 
     def get_ibis_table(self, table_name):
         remote_db = self._get_ibis_backend()
-        if self.database_type == "PostgreSQL" and "." in table_name:
-            schema, table = table_name.split(".")
+        if self.database_type == "PostgreSQL":
+            schema, table = self.split_table_name(table_name)
             return remote_db.table(table, database=schema)
+        if self.type == "REST API":
+            return remote_db.table(table_name, database=self.schema)
         return remote_db.table(table_name)
 
 
@@ -434,3 +581,18 @@ def db_connections():
         yield
     finally:
         after_request()
+
+
+def db_type_to_sqlglot_dialect(db_type: str) -> str | None:
+    if db_type == "REST API":
+        return "duckdb"
+
+    return {
+        "MariaDB": "mysql",
+        "PostgreSQL": "postgres",
+        "SQLite": "sqlite",
+        "DuckDB": "duckdb",
+        "BigQuery": "bigquery",
+        "MSSQL": "tsql",
+        "ClickHouse": "clickhouse",
+    }.get(db_type)

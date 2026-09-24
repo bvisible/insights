@@ -1,4 +1,5 @@
 import { watchDebounced } from '@vueuse/core'
+import { __ } from '../translation'
 import domtoimage from 'dom-to-image'
 import { isEqual } from 'es-toolkit'
 import { call, debounce } from 'frappe-ui'
@@ -16,6 +17,7 @@ import { getFormattedDate } from '../query/helpers'
 import session from '../session'
 import {
 	ColumnDataType,
+	DataFormat,
 	DropdownOption,
 	GroupedDropdownOption,
 	QueryResultColumn,
@@ -141,7 +143,7 @@ export function getErrorMessage(err: any) {
 export function showErrorToast(err: Error, raise = true) {
 	createToast({
 		variant: 'error',
-		title: 'Error',
+		title: __('Error'),
 		message: getErrorMessage(err),
 	})
 	if (raise) throw err
@@ -181,6 +183,31 @@ export function formatNumber(number: number, precision = 0) {
 		minimumFractionDigits: precision,
 		maximumFractionDigits: precision,
 	}).format(number)
+}
+
+export type FormatUnits = {
+	// what the stored number must be multiplied by to reach the printed one
+	scale: number
+	prefix: string
+	suffix: string
+}
+
+const NO_UNITS: FormatUnits = { scale: 1, prefix: '', suffix: '' }
+
+// A measure states its unit once, and every reading of it prints that unit the
+// same way. The symbol sits where fmt_money puts it, so Insights and desk agree.
+export function getFormatUnits(format?: DataFormat, code?: string | null): FormatUnits {
+	if (format === 'percent') {
+		return { scale: 100, prefix: '', suffix: '%' }
+	}
+	if (format !== 'currency') return NO_UNITS
+
+	const resolved = code === undefined ? session.site?.currency : code
+	const currency = resolved ? session.site?.currency_symbols?.[resolved] : undefined
+	if (!currency?.symbol) return NO_UNITS
+	return currency.symbol_on_right
+		? { scale: 1, prefix: '', suffix: ` ${currency.symbol}` }
+		: { scale: 1, prefix: `${currency.symbol} `, suffix: '' }
 }
 
 export function guessPrecision(number: number) {
@@ -246,43 +273,36 @@ export function safeJSONParse(str: string, defaultValue = null) {
 		console.error(e)
 		console.groupEnd()
 		createToast({
-			message: 'Error parsing JSON',
+			message: __('Error parsing JSON'),
 			variant: 'error',
 		})
 		return defaultValue
 	}
 }
 
-export function copyToClipboard(text: string) {
-	if (navigator.clipboard) {
-		navigator.clipboard.writeText(text)
-		createToast({
-			variant: 'success',
-			title: 'Copied to clipboard',
-		})
-	} else {
-		// try to use execCommand
-		const textArea = document.createElement('textarea')
-		textArea.value = text
-		textArea.style.position = 'fixed'
-		document.body.appendChild(textArea)
-		textArea.focus()
-		textArea.select()
-		try {
-			document.execCommand('copy')
-			createToast({
-				variant: 'success',
-				title: 'Copied to clipboard',
-			})
-		} catch (err) {
-			createToast({
-				variant: 'error',
-				title: 'Copy to clipboard not supported',
-			})
-		} finally {
-			document.body.removeChild(textArea)
-		}
+export function copyToClipboard(text: string | Promise<string>) {
+	if (text instanceof Promise) {
+		// Safari blocks clipboard access if called after an async operation
+		// fix: use call ClipboardItem synchronously but with the text as a promise
+		const blob = text.then((t) => new Blob([t], { type: 'text/plain' }))
+		navigator.clipboard
+			.write([new ClipboardItem({ 'text/plain': blob })])
+			.then(() => showCopyToast(true))
+			.catch(() => showCopyToast(false))
+		return
 	}
+
+	navigator.clipboard
+		.writeText(text)
+		.then(() => showCopyToast(true))
+		.catch(() => showCopyToast(false))
+}
+
+function showCopyToast(success: boolean) {
+	createToast({
+		variant: success ? 'success' : 'error',
+		title: success ? __('Copied to clipboard') : __('Failed to copy to clipboard'),
+	})
 }
 
 export function ellipsis(value: string, length: number) {
@@ -439,13 +459,16 @@ export function createHeaders(columns: QueryResultColumn[]) {
 		const areDates = areValidDates(headerRow.map((header) => header.label))
 		if (!areDates) continue
 
+		const areFirstOfFiscalYear = areFirstDayOfFiscalYear(headerRow.map((header) => header.label))
 		const areFirstOfYear = areFirstDayOfYear(headerRow.map((header) => header.label))
 		const areFirstOfMonth = areFirstDayOfMonth(headerRow.map((header) => header.label))
 
 		for (let header of headerRow) {
 			if (!isValidDate(header.label)) continue
 
-			if (areFirstOfYear) {
+			if (areFirstOfFiscalYear) {
+				header.label = getFormattedDate(header.label, 'fiscal_year')
+			} else if (areFirstOfYear) {
 				header.label = getFormattedDate(header.label, 'year')
 			} else if (areFirstOfMonth) {
 				header.label = getFormattedDate(header.label, 'month')
@@ -456,6 +479,24 @@ export function createHeaders(columns: QueryResultColumn[]) {
 	}
 
 	return groupedHeaders
+}
+
+function areFirstDayOfFiscalYear(data: string[]) {
+	const fiscalYearStart = session.user?.fiscal_year_start
+	if (!fiscalYearStart) return false
+
+	const start = new Date(fiscalYearStart)
+	const fiscalStartMonth = start.getMonth()
+	const fiscalStartDay = start.getDate()
+
+	// when the fiscal year aligns with the calendar year, defer to year formatting
+	if (fiscalStartMonth === 0 && fiscalStartDay === 1) return false
+
+	const firstDayOfFiscalYear = (date: string) => {
+		const d = new Date(date)
+		return d.getMonth() === fiscalStartMonth && d.getDate() === fiscalStartDay
+	}
+	return data.map(firstDayOfFiscalYear).filter(Boolean).length / data.length >= 0.5
 }
 
 function areFirstDayOfMonth(data: string[]) {

@@ -8,6 +8,7 @@ app_email = "hello@frappe.io"
 app_license = "GNU GPLv3"
 
 export_python_type_annotations = True
+require_type_annotated_api_methods = True
 
 
 add_to_apps_screen = [
@@ -20,13 +21,21 @@ add_to_apps_screen = [
     }
 ]
 
+# Any app can ship workbooks to Insights by pointing this hook at a directory
+# (relative to the app) holding one folder per workbook — manifest.json +
+# workbook.json + optional preview.png. Insights is its own first consumer: the
+# bundled ERPNext workbooks are discovered through the same public contract.
+# Deliberately policy-free name: how the site consumes these (import a copy
+# today, versioned updates later) can evolve without breaking the hook.
+insights_workbooks = "workbook_templates"
+
 
 # Includes in <head>
 # ------------------
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/insights/css/insights.css"
-# app_include_js = "insights.bundle.js"
+app_include_js = "insights_nudge.bundle.js"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/insights/css/insights.css"
@@ -73,11 +82,6 @@ add_to_apps_screen = [
 # 	"methods": "insights.utils.jinja_methods",
 # 	"filters": "insights.utils.jinja_filters"
 # }
-
-# Setup
-# ------------
-setup_wizard_requires = "assets/insights/js/setup_wizard.js"
-setup_wizard_stages = "insights.setup.setup_wizard.get_setup_stages"
 
 # Installation
 # ------------
@@ -164,6 +168,7 @@ scheduler_events = {
     ],
     "daily": [
         "insights.api.data_store.sync_tables",
+        "insights.telemetry_scan.run_site_scan",
     ],
     "hourly": [
         "insights.api.data_store.update_failed_sync_status",

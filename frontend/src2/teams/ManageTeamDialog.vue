@@ -3,6 +3,8 @@ import { computed, ref, watch } from 'vue'
 import Switch from '../components/Switch.vue'
 import UserSelector from '../components/UserSelector.vue'
 import { copy } from '../helpers'
+import session from '../session'
+import { __ } from '../translation'
 import useUserStore from '../users/users'
 import TeamResourceSelector from './TeamResourceSelector.vue'
 import useTeamStore, { Team } from './teams'
@@ -21,7 +23,7 @@ watch(
 			userStore.getUsers()
 		}
 	},
-	{ immediate: true }
+	{ immediate: true },
 )
 
 const teamModified = computed(() => {
@@ -47,7 +49,7 @@ function removeMember(userEmail: string) {
 		return
 	}
 	currentTeam.value.team_members = currentTeam.value.team_members.filter(
-		(u) => u.user !== userEmail
+		(u) => u.user !== userEmail,
 	)
 }
 
@@ -59,10 +61,10 @@ const activeTab = ref('Members')
 		v-if="currentTeam"
 		v-model="show"
 		:options="{
-			title: 'Manage Team',
+			title: __('Manage Team'),
 			actions: [
 				{
-					label: 'Done',
+					label: __('Done'),
 					variant: 'solid',
 					disabled: !teamModified || teamStore.updatingTeam,
 					loading: teamStore.updatingTeam,
@@ -73,7 +75,17 @@ const activeTab = ref('Members')
 						})
 					},
 				},
-			],
+				session.user.is_admin && currentTeam.name !== 'Admin'
+					? {
+							label: __('Delete'),
+							variant: 'subtle',
+							theme: 'red',
+							loading: teamStore.deletingTeam,
+							onClick: () =>
+								teamStore.deleteTeam(currentTeam.name).then(() => (show = false)),
+					  }
+					: null,
+			].filter(Boolean),
 		}"
 	>
 		<template #body-content>
@@ -115,10 +127,7 @@ const activeTab = ref('Members')
 					</div>
 
 					<div class="flex flex-1 flex-col gap-1 overflow-y-auto">
-						<div
-							v-if="userStore.loading"
-							class="flex items-center justify-center py-8"
-						>
+						<div v-if="userStore.loading" class="flex items-center justify-center py-8">
 							<LoadingIndicator class="h-6 w-6 text-gray-600" />
 						</div>
 						<div

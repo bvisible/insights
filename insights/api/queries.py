@@ -1,10 +1,13 @@
 import frappe
 
-from insights.decorators import insights_whitelist
+from insights.decorators import check_role, insights_whitelist
 
 
 @insights_whitelist()
 def get_queries():
+    allowed = frappe.get_list("Insights Query", pluck="name", limit=0)
+    if not allowed:
+        return []
     Query = frappe.qb.DocType("Insights Query")
     QueryChart = frappe.qb.DocType("Insights Chart")
     DataSource = frappe.qb.DocType("Insights Data Source")
@@ -32,6 +35,7 @@ def get_queries():
             QueryChart.chart_type,
             DataSource.title.as_("data_source_title"),
         )
+        .where(Query.name.isin(allowed))
         .groupby(
             Query.name,
             User.full_name.as_("owner_name"),
@@ -75,11 +79,24 @@ def create_chart():
 
 @frappe.whitelist(allow_guest=True)
 def pivot(
-    data,
+    data: list[dict],
     indexes: list[str] | None = None,
     columns: list[str] | None = None,
     values: list[str] | None = None,
+    public_key: str | None = None,
 ):
+    if frappe.session.user == "Guest" or public_key:
+        if not isinstance(public_key, str) or not public_key.strip():
+            frappe.throw("Public Key is required")
+
+        if not frappe.db.exists(
+            "Insights Dashboard",
+            {"public_key": public_key, "is_public": 1},
+        ):
+            frappe.throw("Invalid Public Key")
+    else:
+        check_role("Insights User")
+
     indexes = indexes or []
     columns = columns or []
     values = values or []
@@ -127,12 +144,12 @@ def flatten_column_keys(pivoted_records: list[dict]):
     for row in pivoted_records:
         new_row = {}
         cols = list(row.keys())
-        if type(cols[0]) != tuple:
+        if not isinstance(cols[0], tuple):
             new_records.append(row)
             continue
         for keys in cols:
             first_key = keys[0]
-            new_keys = list(keys[1:]) + [first_key]
+            new_keys = [*list(keys[1:]), first_key]
             new_keys = [key for key in new_keys if key]
             new_key = "___".join(new_keys)
             new_row[new_key] = row[keys]

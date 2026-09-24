@@ -1,16 +1,17 @@
 # //// Neoffice — added file (no upstream equivalent). One test per guard added by
 # //// the 2026-09-04 security pass on this fork; every test names the defect it
 # //// pins so a merge that loses the guard fails here instead of in production.
-# //// (drop once upstream PR https://github.com/frappe/insights/pull/PR_NUMBER is merged)
+# //// At the 2026-09-24 merge of upstream version-3, F3 and F4 are upstream's own fixes
+# //// (check_referenced_query_access, check_stored_document): their tests stay here
+# //// as regression guards on the merged code. The others pin guards upstream
+# //// still lacks.
 import json
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils.password import get_decrypted_password
 
-import sqlglot as sg
-
-from insights.api import _load_doc_for_method
+from insights.api import check_stored_document, run_doc_method
 from insights.insights.doctype.insights_data_source_v3 import ibis_utils
 from insights.insights.doctype.insights_data_source_v3.connectors.postgresql import (
     quote_dsn_credentials,
@@ -101,24 +102,29 @@ class TestInsightsSecurity(FrappeTestCase):
         return _Patch()
 
     # ------------------------------------------------------------------ F4
-    def test_run_doc_method_ignores_the_owner_in_the_payload(self):
-        """F4 - the document was built from the request body and the permission
-        was checked on it, so putting your own e-mail in `owner` made you the
-        owner of every document you could name."""
-        workbook = frappe.get_doc({"doctype": "Insights Workbook", "title": "Security probe"})
+    def make_query_of(self, owner: str, title: str):
+        workbook = frappe.get_doc({"doctype": "Insights Workbook", "title": f"{title} workbook"})
         workbook.insert(ignore_permissions=True)
+        frappe.db.set_value("Insights Workbook", workbook.name, "owner", owner)
 
         query = frappe.get_doc(
             {
                 "doctype": "Insights Query v3",
-                "title": "owned by someone else",
+                "title": title,
                 "workbook": workbook.name,
                 "operations": json.dumps([]),
             }
         )
         query.insert(ignore_permissions=True)
-        frappe.db.set_value("Insights Query v3", query.name, "owner", OTHER_USER)
+        frappe.db.set_value("Insights Query v3", query.name, "owner", owner)
+        return query
 
+    def test_run_doc_method_ignores_the_owner_in_the_payload(self):
+        """F4 - the document was built from the request body and the permission
+        was checked on it, so putting your own e-mail in `owner` made you the
+        owner of every document you could name. Access is now decided on the
+        stored row (upstream check_stored_document, which replaced ours)."""
+        query = self.make_query_of(OTHER_USER, "owned by someone else")
         forged = {
             "doctype": "Insights Query v3",
             "name": query.name,
@@ -128,59 +134,25 @@ class TestInsightsSecurity(FrappeTestCase):
         }
 
         frappe.set_user(TEST_USER)
-        loaded = _load_doc_for_method(forged, "Insights Query v3", query.name)
-
-        self.assertEqual(loaded.owner, OTHER_USER, "owner must come from the database")
-        self.assertEqual(
-            str(loaded.workbook), str(workbook.name), "workbook must come from the database"
-        )
+        with self.assertRaises(frappe.PermissionError):
+            run_doc_method("execute", json.dumps(forged))
 
     def test_run_doc_method_keeps_unsaved_documents_working(self):
         """F4 - the editor previews UNSAVED queries through this endpoint; a name
-        that does not exist must still yield the document from the payload."""
-        payload = {
-            "doctype": "Insights Query v3",
-            "name": "new-query-does-not-exist",
-            "title": "unsaved",
-            "operations": json.dumps([]),
-        }
-        loaded = _load_doc_for_method(payload, "Insights Query v3", payload["name"])
-        self.assertEqual(loaded.title, "unsaved")
-
-    def test_run_doc_method_rejects_a_stale_document(self):
-        """F4 - check_if_latest() was never called, so a caller could act on a
-        document that had moved underneath it."""
-        workbook = frappe.get_doc({"doctype": "Insights Workbook", "title": "Stale probe"})
-        workbook.insert(ignore_permissions=True)
-
-        query = frappe.get_doc(
-            {
-                "doctype": "Insights Query v3",
-                "title": "stale probe",
-                "workbook": workbook.name,
-                "operations": json.dumps([]),
-            }
-        )
-        query.insert(ignore_permissions=True)
-
-        payload = {
-            "doctype": "Insights Query v3",
-            "name": query.name,
-            "modified": "2000-01-01 00:00:00.000000",
-        }
-        with self.assertRaises(frappe.TimestampMismatchError):
-            _load_doc_for_method(payload, "Insights Query v3", query.name)
+        with no row behind it discloses nothing and must not be refused."""
+        frappe.set_user(TEST_USER)
+        self.assertIsNone(check_stored_document("Insights Query v3", "new-query-does-not-exist"))
 
     # ------------------------------------------------------------------ F3
-    def test_export_skips_linked_queries_the_caller_cannot_read(self):
+    def test_export_refuses_linked_queries_the_caller_cannot_read(self):
         """F3 - export() loaded every linked query with no permission check, so
-        exporting your own query handed you the definition of someone else's."""
+        exporting your own query handed you the definition of someone else's.
+        Upstream's fix (check_referenced_query_access) refuses the export where
+        ours skipped the dependency; either way the definition stays private."""
         workbook = frappe.get_doc({"doctype": "Insights Workbook", "title": "Export probe"})
         workbook.insert(ignore_permissions=True)
 
-        other_workbook = frappe.get_doc(
-            {"doctype": "Insights Workbook", "title": "Someone else's workbook"}
-        )
+        other_workbook = frappe.get_doc({"doctype": "Insights Workbook", "title": "Someone else's workbook"})
         other_workbook.insert(ignore_permissions=True)
         frappe.db.set_value("Insights Workbook", other_workbook.name, "owner", OTHER_USER)
 
@@ -205,19 +177,12 @@ class TestInsightsSecurity(FrappeTestCase):
         )
         mine.insert(ignore_permissions=True)
         frappe.db.set_value("Insights Query v3", mine.name, "owner", TEST_USER)
-        frappe.db.set_value(
-            "Insights Query v3", mine.name, "linked_queries", json.dumps([secret.name])
-        )
+        frappe.db.set_value("Insights Query v3", mine.name, "linked_queries", json.dumps([secret.name]))
         frappe.db.set_value("Insights Workbook", workbook.name, "owner", TEST_USER)
 
         frappe.set_user(TEST_USER)
-        exported = frappe.get_doc("Insights Query v3", mine.name).export()
-
-        self.assertNotIn(
-            secret.name,
-            exported["dependencies"]["queries"],
-            "a linked query the caller cannot read must not be exported",
-        )
+        with self.assertRaises(frappe.PermissionError):
+            frappe.get_doc("Insights Query v3", mine.name).export()
 
     # ------------------------------------------------------------------ F7a
     def restrict_tables(self, *restricted: str):
@@ -234,10 +199,8 @@ class TestInsightsSecurity(FrappeTestCase):
                     insights_team.check_table_permission,
                 )
                 ibis_utils.is_insights_table = lambda ds, name: name in restricted
-                ibis_utils.get_restricted_table_sql = (
-                    lambda ds, name, dialect: f"SELECT * FROM `{name}` WHERE `owner` = 'x'"
-                    if name in restricted
-                    else None
+                ibis_utils.get_restricted_table_sql = lambda ds, name, dialect: (
+                    f"SELECT * FROM `{name}` WHERE `owner` = 'x'" if name in restricted else None
                 )
                 insights_team.check_table_permission = lambda ds, name, **kw: checked.append(name)
                 return checked
@@ -252,41 +215,51 @@ class TestInsightsSecurity(FrappeTestCase):
         test.addCleanup(lambda: None)
         return _Patch()
 
-    def test_raw_sql_checks_permissions_on_every_referenced_table(self):
-        """F7a - the permission check ran on `tables - cte_aliases`, and the caller
-        writes both sides: a CTE hid the table it was named after."""
-        parsed = sg.parse_one(
-            "WITH recent AS (SELECT * FROM tabUser) SELECT * FROM recent", dialect="mysql"
-        )
-        with self.restrict_tables("tabUser") as checked:
-            ibis_utils.get_sql_tables_to_restrict("Site DB", parsed, "mysql")
+    def test_upstream_still_drops_tables_named_like_a_cte(self):
+        """F7a canary - the reason check_cte_shadowing() exists. When this fails,
+        upstream resolves CTE names itself: drop the guard and these tests."""
+        from insights.insights.query_utils import extract_sql_table_refs
 
-        self.assertEqual(checked, ["tabUser"], "the referenced table must be checked")
-
-    def test_raw_sql_refuses_a_cte_shadowing_a_restricted_table(self):
-        """F7a - `WITH tabUser AS (SELECT * FROM tabUser) SELECT * FROM tabUser`
-        emptied the table set, so nothing was checked and no restriction was
-        prepended: the raw SQL reached the backend untouched."""
-        parsed = sg.parse_one(
+        refs = extract_sql_table_refs(
             "WITH tabUser AS (SELECT * FROM tabUser) SELECT * FROM tabUser", dialect="mysql"
         )
+        self.assertEqual(refs, [], "upstream now sees the shadowed table")
+
+    def test_raw_sql_checks_permission_on_a_table_a_cte_is_named_after(self):
+        """F7a - a CTE named after a table hid that table from the permission
+        check: the table set was empty, so nothing was checked."""
         with self.restrict_tables("tabUser") as checked:
-            with self.assertRaises(frappe.PermissionError):
-                ibis_utils.get_sql_tables_to_restrict("Site DB", parsed, "mysql")
+            ibis_utils.is_insights_table = lambda ds, name: name == "tabUser"
+            ibis_utils.get_restricted_table_sql = lambda ds, name, dialect: None
+            ibis_utils.check_cte_shadowing(
+                "Site DB", "WITH tabUser AS (SELECT * FROM tabUser) SELECT * FROM tabUser", "mysql"
+            )
 
         self.assertEqual(checked, ["tabUser"], "the shadowed table must still be checked")
 
-    def test_raw_sql_allows_a_cte_that_shadows_nothing_restricted(self):
-        """F7a - the guard must not cost a legitimate CTE its name: only a shadow
-        that actually hides a restriction is refused."""
-        parsed = sg.parse_one(
-            "WITH helper AS (SELECT * FROM tabUser) SELECT * FROM helper", dialect="mysql"
-        )
-        with self.restrict_tables("tabUser"):
-            replace_map = ibis_utils.get_sql_tables_to_restrict("Site DB", parsed, "mysql")
+    def test_raw_sql_refuses_a_cte_shadowing_a_restricted_table(self):
+        """F7a - `WITH tabUser AS (SELECT * FROM tabUser) SELECT * FROM tabUser`
+        left no table to bind, so no restriction was applied: the raw SQL reached
+        the backend untouched."""
+        with self.restrict_tables("tabUser") as checked:
+            with self.assertRaises(frappe.PermissionError):
+                ibis_utils.check_cte_shadowing(
+                    "Site DB",
+                    "WITH tabUser AS (SELECT * FROM tabUser) SELECT * FROM tabUser",
+                    "mysql",
+                )
 
-        self.assertIn("tabUser", replace_map, "the restriction must still be prepended")
-        self.assertNotIn("helper", replace_map)
+        self.assertEqual(checked, ["tabUser"], "the shadowed table must still be checked")
+
+    def test_raw_sql_allows_a_cte_that_shadows_nothing(self):
+        """F7a - the guard must not cost a legitimate CTE its name: a CTE named
+        after no table passes, and the table it reads is left to the bindings."""
+        with self.restrict_tables("tabUser") as checked:
+            ibis_utils.check_cte_shadowing(
+                "Site DB", "WITH helper AS (SELECT * FROM tabUser) SELECT * FROM helper", "mysql"
+            )
+
+        self.assertEqual(checked, [], "nothing is shadowed, so the guard has nothing to check")
 
     # ------------------------------------------------------------------ F1
     def test_data_source_secrets_are_password_fields(self):

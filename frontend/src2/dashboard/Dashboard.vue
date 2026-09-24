@@ -1,17 +1,14 @@
 <script setup lang="ts">
 import { Breadcrumbs, call } from 'frappe-ui'
 import { RefreshCcw } from 'lucide-vue-next'
-import {computed, provide, ref } from 'vue'
+import { computed, provide, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { downloadImage, waitUntil, wheneverChanges } from '../helpers'
 import useDashboard from './dashboard'
+import { __ } from '../translation'
 import DashboardItem from './DashboardItem.vue'
 import VueGridLayout from './VueGridLayout.vue'
 import { useStorage } from '@vueuse/core'
-//// Neoffice — added import. The whole file's user-facing strings are wrapped in
-//// __() (upstream hardcodes English); the French catalogue lives in
-//// insights/locale/fr.po. Keep this import when merging upstream's version.
-import { __ } from '../translation'
 
 const props = defineProps<{ name: string }>()
 
@@ -28,6 +25,9 @@ function openWorkbook() {
 	router.push(`/workbook/${dashboard.doc.workbook}`)
 }
 await waitUntil(() => dashboard.isloaded)
+
+document.title = `${dashboard.doc.title} | Insights`
+
 const canOpenWorkbook = ref(dashboard.doc.has_workbook_access)
 
 const dashboardContainer = ref<HTMLElement | null>(null)
@@ -41,7 +41,6 @@ const verticalCompact = useStorage('dashboard_vertical_compact', true)
 
 <template>
 	<header class="flex h-12 items-center justify-between border-b py-2.5 pl-5 pr-2">
-		<!-- //// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French -->
 		<Breadcrumbs
 			:items="[
 				{ label: __('Dashboards'), route: '/dashboards' },
@@ -49,7 +48,6 @@ const verticalCompact = useStorage('dashboard_vertical_compact', true)
 			]"
 		/>
 		<div class="flex items-center gap-2">
-			<!-- //// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French -->
 			<Button variant="outline" @click="() => dashboard.refresh(true)" :label="__('Refresh')">
 				<template #prefix>
 					<RefreshCcw class="h-4 w-4 text-gray-700" stroke-width="1.5" />
@@ -60,20 +58,19 @@ const verticalCompact = useStorage('dashboard_vertical_compact', true)
 				:button="{ icon: 'more-vertical', variant: 'outline' }"
 				:options="[
 					{
-						/* //// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French */
 						label: __('Export as PNG'),
 						variant: 'outline',
 						icon: 'download',
 						onClick: downloadDashboardImage,
 					},
-					 canOpenWorkbook ? {
-						/* //// Neoffice — __() wrapping: upstream hardcodes English, our fleet is French */
-						label: __('Open Workbook'),
-						variant: 'outline',
-						icon: 'external-link',
-						onClick: openWorkbook,
-					} : null
-					,
+					canOpenWorkbook
+						? {
+								label: __('Open Workbook'),
+								variant: 'outline',
+								icon: 'external-link',
+								onClick: openWorkbook,
+						  }
+						: null,
 				]"
 			/>
 		</div>

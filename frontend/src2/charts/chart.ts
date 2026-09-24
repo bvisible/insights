@@ -12,8 +12,9 @@ import { GranularityType } from '../helpers/constants'
 import useDocumentResource from '../helpers/resource'
 import { createToast } from '../helpers/toasts'
 import { column, count, query_table } from '../query/helpers'
-import useQuery, { Query } from '../query/query'
+import useQuery, { makeAdhocQuery, Query } from '../query/query'
 import router from '../router'
+import { __ } from '../translation'
 import {
 	AXIS_CHARTS,
 	AxisChartConfig,
@@ -26,7 +27,12 @@ import {
 } from '../types/chart.types'
 import { InsightsChartv3 } from '../types/workbook.types'
 import useWorkbook, { getLinkedQueries } from '../workbook/workbook'
-import { handleOldXAxisConfig, handleOldYAxisConfig, setDimensionNames } from './helpers'
+import {
+	ensureConfigSlots,
+	handleOldXAxisConfig,
+	handleOldYAxisConfig,
+	setDimensionNames,
+} from './helpers'
 
 const charts = new Map<string, Chart>()
 
@@ -54,6 +60,8 @@ function makeChart(name: string) {
 		if (!chart.isloaded) return {} as Query
 		return useQuery(chart.doc.data_query)
 	})
+
+	const isConfigValid = computed(() => validateConfig())
 	async function refresh(force?: boolean, reload?: boolean) {
 		if (reload) {
 			await chart.load()
@@ -63,22 +71,22 @@ function makeChart(name: string) {
 			() => chart.isloaded && dataQuery.value.isloaded && useQuery(chart.doc.query).isloaded
 		)
 
-		const isValid = validateConfig()
-		if (!isValid) return
+		if (!isConfigValid.value) return
 
-		const query = useQuery('new-query-' + getUniqueId())
+		const query = makeAdhocQuery()
 		addSourceOperation(query)
 		addFilterOperation(query)
 		addChartOperation(query)
 		addOrderByOperation(query)
-		addLimitOperation(query)
 
+		const currentLimit = chart.doc.config.limit || 100
 		const shouldExecute =
 			force ||
 			reload ||
 			!dataQuery.value.result.executedSQL ||
 			dataQuery.value.adhocFilters ||
-			JSON.stringify(query.doc.operations) !== JSON.stringify(dataQuery.value.doc.operations)
+			JSON.stringify(query.doc.operations) !== JSON.stringify(dataQuery.value.doc.operations) ||
+			currentLimit !== dataQuery.value.pageSize
 
 		if (!shouldExecute) {
 			return
@@ -86,7 +94,7 @@ function makeChart(name: string) {
 
 		dataQuery.value.setOperations(copy(query.doc.operations))
 		dataQuery.value.doc.use_live_connection = query.doc.use_live_connection
-		return dataQuery.value.execute(force)
+		return dataQuery.value.execute(force, chart.doc.config.limit)
 	}
 
 	function validateConfig() {
@@ -94,20 +102,20 @@ function makeChart(name: string) {
 		if (!chart.doc.query) {
 			messages.push({
 				variant: 'error',
-				message: 'Query is required',
+				message: __('Query is required'),
 			})
 		}
 		if (!chart.doc.chart_type) {
 			messages.push({
 				variant: 'error',
-				message: 'Chart type is required',
+				message: __('Chart type is required'),
 			})
 		}
 
 		if (!CHARTS.includes(chart.doc.chart_type)) {
 			messages.push({
 				variant: 'error',
-				message: 'Invalid chart type: ' + chart.doc.chart_type,
+				message: __('Invalid chart type: ') + chart.doc.chart_type,
 			})
 		}
 
@@ -116,13 +124,13 @@ function makeChart(name: string) {
 			if (!config.x_axis.dimension || !config.x_axis.dimension.column_name) {
 				messages.push({
 					variant: 'error',
-					message: 'X-axis is required',
+					message: __('X-axis is required'),
 				})
 			}
-			if (config.x_axis.dimension.column_name === config.split_by?.dimension.column_name) {
+			if (config.x_axis.dimension.column_name === config.split_by?.dimension?.column_name) {
 				messages.push({
 					variant: 'error',
-					message: 'X-axis and Split by cannot be the same',
+					message: __('X-axis and Split by cannot be the same'),
 				})
 			}
 		}
@@ -132,7 +140,7 @@ function makeChart(name: string) {
 			if (!config.number_columns?.filter((c) => c.measure_name).length) {
 				messages.push({
 					variant: 'error',
-					message: 'Number column is required',
+					message: __('Number column is required'),
 				})
 			}
 		}
@@ -142,13 +150,13 @@ function makeChart(name: string) {
 			if (!config.label_column?.column_name) {
 				messages.push({
 					variant: 'error',
-					message: 'Label column is required',
+					message: __('Label column is required'),
 				})
 			}
 			if (!config.value_column?.measure_name) {
 				messages.push({
 					variant: 'error',
-					message: 'Value column is required',
+					message: __('Value column is required'),
 				})
 			}
 		}
@@ -158,7 +166,7 @@ function makeChart(name: string) {
 			if (!config.rows?.filter((r) => r.column_name).length) {
 				messages.push({
 					variant: 'error',
-					message: 'Rows are required',
+					message: __('Rows are required'),
 				})
 			}
 		}
@@ -171,14 +179,14 @@ function makeChart(name: string) {
 			if (!hasLocation) {
 				messages.push({
 					variant: 'error',
-					message: 'Location column is required',
+					message: __('Location column is required'),
 				})
 			}
 
 			if (!hasValue) {
 				messages.push({
 					variant: 'error',
-					message: 'Value column is required',
+					message: __('Value column is required'),
 				})
 			}
 		}
@@ -188,13 +196,13 @@ function makeChart(name: string) {
 			if (!config.xAxis?.measure_name) {
 				messages.push({
 					variant: 'error',
-					message: 'X-axis is required',
+					message: __('X-axis is required'),
 				})
 			}
 			if (!config.yAxis?.measure_name) {
 				messages.push({
 					variant: 'error',
-					message: 'Y-axis is required',
+					message: __('Y-axis is required'),
 				})
 			}
 		}
@@ -361,12 +369,6 @@ function makeChart(name: string) {
 		})
 	}
 
-	function addLimitOperation(query: Query) {
-		if (chart.doc.config.limit) {
-			query.addLimit(chart.doc.config.limit)
-		}
-	}
-
 	function updateGranularity(column_name: string, granularity: GranularityType) {
 		if ('x_axis' in chart.doc.config) {
 			if (chart.doc.config.x_axis?.dimension?.dimension_name === column_name) {
@@ -391,6 +393,10 @@ function makeChart(name: string) {
 
 	function getShareLink() {
 		return `${window.location.origin}/insights/shared/chart/${chart.doc.name}`
+	}
+
+	function updateAccess(is_public: boolean) {
+		return chart.call('update_access', { is_public }).then(() => chart.load())
 	}
 
 	function getDependentQueries() {
@@ -430,21 +436,18 @@ function makeChart(name: string) {
 	watch(
 		() => chart.doc.chart_type,
 		(newType: string, oldType: string) => {
-			if (newType === oldType) return
-			if (!newType || !oldType) return
-			if (
-				(AXIS_CHARTS.includes(newType) && !AXIS_CHARTS.includes(oldType)) ||
-				(!AXIS_CHARTS.includes(newType) && AXIS_CHARTS.includes(oldType))
-			) {
+			if (!newType || newType === oldType) return
+			const crossesAxisBoundary =
+				oldType && AXIS_CHARTS.includes(newType) !== AXIS_CHARTS.includes(oldType)
+			if (crossesAxisBoundary) {
 				resetConfig()
 			}
+			ensureConfigSlots(chart.doc.config, newType)
 		}
 	)
 
 	function copyChart() {
-		chart.call('export').then((data) => {
-			copyToClipboard(JSON.stringify(data, null, 2))
-		})
+		copyToClipboard(chart.call('export').then((data) => JSON.stringify(data, null, 2)))
 	}
 
 	function duplicateChart() {
@@ -453,7 +456,7 @@ function makeChart(name: string) {
 			.call('duplicate')
 			.then((newChartName: string) => {
 				createToast({
-					title: 'Chart duplicated',
+					title: __('Chart duplicated'),
 					variant: 'success',
 				})
 				router.push(`/workbook/${chart.doc.workbook}/chart/${newChartName}`)
@@ -495,12 +498,14 @@ function makeChart(name: string) {
 		...toRefs(chart),
 
 		dataQuery,
+		isConfigValid,
 
 		refresh,
 		updateGranularity,
 		resetConfig,
 
 		getShareLink,
+		updateAccess,
 
 		getDependentQueries,
 		getDependentQueryColumns,
@@ -584,6 +589,13 @@ function transformChartDoc(doc: any) {
 	}
 
 	doc.config = setDimensionNames(doc.config)
+	doc.config = ensureConfigSlots(doc.config, doc.chart_type)
+
+	// The bar config form writes this default when it mounts, which leaves a
+	// freshly opened chart dirty. Set it on load instead.
+	if (doc.chart_type === 'Bar' && doc.config.y_axis.stack === undefined) {
+		doc.config.y_axis.stack = true
+	}
 
 	return doc
 }

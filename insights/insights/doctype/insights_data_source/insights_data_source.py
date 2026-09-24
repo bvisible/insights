@@ -25,9 +25,7 @@ from .sources.sqlite import SQLiteDB
 
 class InsightsDataSourceDocument:
     def before_insert(self):
-        if self.is_site_db and frappe.db.exists(
-            "Insights Data Source", {"is_site_db": 1}
-        ):
+        if self.is_site_db and frappe.db.exists("Insights Data Source", {"is_site_db": 1}):
             frappe.throw("Only one site database can be configured")
 
     def before_save(self: "InsightsDataSource"):
@@ -41,9 +39,7 @@ class InsightsDataSourceDocument:
 
         linked_doctypes = ["Insights Table"]
         for doctype in linked_doctypes:
-            for name in frappe.db.get_all(
-                doctype, {"data_source": self.name}, pluck="name"
-            ):
+            for name in frappe.db.get_all(doctype, {"data_source": self.name}, pluck="name"):
                 frappe.delete_doc(doctype, name)
 
     def validate(self):
@@ -133,7 +129,7 @@ class InsightsDataSourceClient:
         )
 
     @frappe.whitelist()
-    def update_table_link(self, data):
+    def update_table_link(self, data: dict | str):
         data = frappe._dict(data)
         data_source = self.name
         primary_table = data.primary_table
@@ -166,7 +162,7 @@ class InsightsDataSourceClient:
             doc.save()
 
     @frappe.whitelist()
-    def delete_table_link(self, data):
+    def delete_table_link(self, data: dict | str):
         data = frappe._dict(data)
         data_source = self.name
 
@@ -194,9 +190,7 @@ class InsightsDataSourceClient:
                 break
 
 
-class InsightsDataSource(
-    InsightsDataSourceDocument, InsightsDataSourceClient, Document
-):
+class InsightsDataSource(InsightsDataSourceDocument, InsightsDataSourceClient, Document):
     @cached_property
     def _db(self) -> BaseDatabase:
         if self.is_site_db:
@@ -219,8 +213,8 @@ class InsightsDataSource(
             # //// Neoffice — read through get_password(): `connection_string` is now
             # //// a Password field on this doctype too (v2 grants read to every
             # //// Insights User, so the DSN was handed out with the record).
-            # //// (drop once upstream PR the upstream PR from bvisible/insights branch
-# //// upstream/security-hardening-2026-09 is merged into frappe/insights)
+            # //// (drop once frappe/insights ships the same fix; it is prepared on our branch
+            # //// upstream/security-hardening-2026-09, not proposed upstream yet)
             "connection_string": self.get_password("connection_string", raise_exception=False),
         }
 

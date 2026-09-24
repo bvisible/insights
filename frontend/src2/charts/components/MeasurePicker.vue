@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { TextInput } from 'frappe-ui'
+import { __ } from '../../translation'
 import { Check, ChevronLeft, Edit, Plus, Settings, XIcon } from 'lucide-vue-next'
 import { computed, ref, watchEffect } from 'vue'
 import InlineFormControlLabel from '../../components/InlineFormControlLabel.vue'
@@ -19,7 +20,20 @@ const emit = defineEmits({ remove: () => true })
 const props = defineProps<{
 	label?: string
 	columnOptions: ColumnOption[]
+	enableFormat?: boolean
 }>()
+
+const formatOptions = [
+	{ label: __('Normal'), value: '' },
+	{ label: __('Percent'), value: 'percent' },
+	{ label: __('Currency'), value: 'currency' },
+]
+
+// True when at least one available column is a pre-aggregated measure (i.e. it
+// came from a summarize/pivot_wider step in the source query). In this case we
+// skip the "pick a function" step by pre-selecting `sum`, since the data is
+// already aggregated and users just want to pick the column directly.
+const sourceHasMeasures = computed(() => props.columnOptions.some((c) => c.is_measure))
 
 const measure = defineModel<Measure>({
 	required: true,
@@ -56,6 +70,28 @@ const expressionMeasure = computed<ExpressionMeasure | undefined>({
 })
 
 const searchQuery = ref('')
+const aggregationPrefixes = aggregations.map((aggregation) => `${aggregation}_`)
+const lastAutoMeasureName = ref('')
+
+// Tracks whether the user manually clicked "back" (ChevronLeft) to change the
+// aggregation. When true, we don't auto-fill the aggregation so the user can
+// choose a different function.
+const userResetAggregation = ref(false)
+
+function isPreAggregatedMeasure(columnName: string) {
+	return (
+		props.columnOptions.find((option) => option.value === columnName)?.is_measure ||
+		aggregationPrefixes.some((prefix) => columnName.startsWith(prefix))
+	)
+}
+
+function getAutoMeasureName(columnMeasure: ColumnMeasure) {
+	if (!columnMeasure.aggregation || !columnMeasure.column_name) return ''
+
+	return isPreAggregatedMeasure(columnMeasure.column_name)
+		? columnMeasure.column_name
+		: `${columnMeasure.aggregation}_of_${columnMeasure.column_name}`
+}
 
 watchEffect(() => {
 	if (!columnMeasure.value && !expressionMeasure.value) {
@@ -63,17 +99,33 @@ watchEffect(() => {
 	}
 })
 
+// When the source columns include pre-aggregated measures, pre-select `sum` as
+// the aggregation so the picker opens straight to the column list — skipping
+// the "pick a function" step that would otherwise produce confusing
+// "sum of sum_of_revenue" labels.
+// We skip this if the user explicitly clicked back to pick a different function.
+watchEffect(() => {
+	if (!sourceHasMeasures.value) return
+	if (userResetAggregation.value) return
+	const cm = columnMeasure.value
+	if (cm && !cm.aggregation) {
+		cm.aggregation = 'sum'
+	}
+})
+
 watchEffect(() => {
 	const cm = columnMeasure.value
 	if (!cm) return
 
+	const autoMeasureName = getAutoMeasureName(cm)
 	const hasDefaultLabel =
 		!cm.measure_name ||
-		cm.measure_name.includes(`${cm.aggregation}_`) ||
-		cm.measure_name.includes(cm.column_name)
+		cm.measure_name === autoMeasureName ||
+		cm.measure_name === lastAutoMeasureName.value
 
-	if (cm.aggregation && cm.column_name && hasDefaultLabel) {
-		cm.measure_name = `${cm.aggregation}_of_${cm.column_name}`
+	if (autoMeasureName && hasDefaultLabel) {
+		cm.measure_name = autoMeasureName
+		lastAutoMeasureName.value = autoMeasureName
 	}
 })
 
@@ -83,17 +135,18 @@ function updateMeasure(measureExpression: ExpressionMeasure) {
 		expression: measureExpression.expression,
 		measure_name: measureExpression.measure_name,
 		data_type: measureExpression.data_type,
+		format: measure.value.format,
 	}
 	showMeasureDialog.value = false
 }
 
 const aggregationOptions: { label: string; value: AggregationType }[] = [
-	{ label: 'Count of...', value: 'count' },
-	{ label: 'Sum of...', value: 'sum' },
-	{ label: 'Average of...', value: 'avg' },
-	{ label: 'Minimum of...', value: 'min' },
-	{ label: 'Maximum of...', value: 'max' },
-	{ label: 'Unique Count of...', value: 'count_distinct' },
+	{ label: __('Count of...'), value: 'count' },
+	{ label: __('Sum of...'), value: 'sum' },
+	{ label: __('Average of...'), value: 'avg' },
+	{ label: __('Minimum of...'), value: 'min' },
+	{ label: __('Maximum of...'), value: 'max' },
+	{ label: __('Unique Count of...'), value: 'count_distinct' },
 ]
 
 const columnOptions = computed(() => {
@@ -116,6 +169,14 @@ const filteredColumnOptions = computed(() => {
 	return columnOptions.value.filter((option) => option.label.toLowerCase().includes(query))
 })
 
+// a currency code is text, so only text columns are offered
+const currencyColumnOptions = computed(() => [
+	{ label: __('Site currency'), value: '' },
+	...props.columnOptions
+		.filter((column) => FIELDTYPES.TEXT.includes(column.data_type))
+		.map((column) => ({ label: column.label, value: column.value })),
+])
+
 function getAggregationLabel(aggregation: AggregationType) {
 	return aggregationOptions.find((option) => option.value === aggregation)?.label
 }
@@ -129,7 +190,25 @@ function resetMeasure() {
 	}
 }
 
-const label = ref('')
+// Called when the user explicitly clicks ChevronLeft to go back and pick a
+// different aggregation function. We set a flag so the watchEffect above doesn't
+// immediately re-fill `sum` and trap the user on the column list.
+function resetAggregation() {
+	userResetAggregation.value = true
+	resetMeasure()
+}
+
+const label = ref(measure.value.measure_name)
+
+function handleRemove() {
+	measure.value = {
+		column_name: '',
+		data_type: 'Decimal',
+		measure_name: '',
+		aggregation: '',
+	}
+	emit('remove')
+}
 </script>
 
 <template>
@@ -170,7 +249,7 @@ const label = ref('')
 								v-else-if="columnMeasure.aggregation"
 								class="mb-1 flex items-center"
 							>
-								<Button class="!h-6 !w-6" @click.prevent.stop="resetMeasure">
+								<Button class="!h-6 !w-6" @click.prevent.stop="resetAggregation">
 									<template #icon>
 										<ChevronLeft
 											class="h-4 w-4 text-gray-700"
@@ -189,7 +268,11 @@ const label = ref('')
 										:key="option.value"
 										class="flex h-7 flex-shrink-0 cursor-pointer items-center justify-between rounded px-2.5 text-base hover:bg-gray-100"
 										@click.prevent.stop="
-											columnMeasure.aggregation = option.value
+											() => {
+												if (!columnMeasure) return
+												columnMeasure.aggregation = option.value
+												userResetAggregation = false
+											}
 										"
 									>
 										<span>{{ option.label }}</span>
@@ -279,10 +362,31 @@ const label = ref('')
 						/>
 					</InlineFormControlLabel>
 
+					<InlineFormControlLabel v-if="props.enableFormat" label="Format">
+						<FormControl
+							type="select"
+							:options="formatOptions"
+							:modelValue="measure.format || ''"
+							@update:modelValue="measure.format = $event || undefined"
+						/>
+					</InlineFormControlLabel>
+
+					<InlineFormControlLabel
+						v-if="props.enableFormat && measure.format === 'currency'"
+						:label="__('Currency from')"
+					>
+						<FormControl
+							type="select"
+							:options="currencyColumnOptions"
+							:modelValue="measure.currency_column || ''"
+							@update:modelValue="measure.currency_column = $event || undefined"
+						/>
+					</InlineFormControlLabel>
+
 					<slot name="config-fields" />
 
 					<div class="flex gap-1">
-						<Button class="w-full" @click="emit('remove')" theme="red">
+						<Button class="w-full" @click="handleRemove" theme="red">
 							<template #prefix>
 								<XIcon class="h-4 w-4 text-red-700" stroke-width="1.5" />
 							</template>

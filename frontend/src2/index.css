@@ -105,3 +105,36 @@ body {
 .dark .border-gray-200 { border-color: rgba(255, 255, 255, 0.1) !important; }
 [data-theme='dark'] .border-gray-300,
 .dark .border-gray-300 { border-color: rgba(255, 255, 255, 0.14) !important; }
+
+/* //// Neoffice — added block, the clay accent of the v3 app. The same override was
+   //// first put in frontend/src/index.css (b99326f9), which only the legacy v2 app
+   //// imports: the page users open kept frappe-ui blue. Re-homed here at the
+   //// 2026-09-24 merge; the v2 copy stays for the v2 app. */
+/* //// Neoffice — added block. frappe-ui exposes its accent through semantic
+   //// --outline-blue / --surface-blue / --text-ink-blue tokens; we re-point
+   //// them at clay #D68A59 (Neoffice Design System) so links, focus rings and
+   //// accent surfaces are warm instead of frappe blue, in light and in dark.
+   //// Upstream's own declarations above are untouched: only the tokens are
+   //// overridden, so a frappe-ui upgrade keeps working. */
+/* === Neoffice Design System — recolor the frappe-ui blue accent to clay
+   #D68A59. Override the semantic --*-blue-* tokens so links/active/focus/
+   accent surfaces become warm clay instead of frappe blue (light + dark).
+   Primary buttons stay ink (frappe-ui solid = gray-900). */
+:root {
+	--outline-blue-1: 221 164 121;
+	--outline-blue-2: 214 138 89;
+	--surface-blue-1: 243 222 204;
+	--surface-blue-2: 214 138 89;
+	--text-ink-blue-1: 250 239 230;
+	--text-ink-blue-2: 194 114 63;
+	--text-ink-blue-3: 161 90 46;
+	--text-ink-blue-4: 126 69 35;
+}
+[data-theme="dark"] {
+	--outline-blue-1: 194 114 63;
+	--outline-blue-2: 194 114 63;
+	--surface-blue-1: 126 69 35;
+	--surface-blue-2: 214 138 89;
+	--text-ink-blue-2: 221 164 121;
+	--text-ink-blue-3: 233 197 164;
+}

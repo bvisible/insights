@@ -1,54 +1,62 @@
-<!-- //// Neoffice — added file (no upstream equivalent at the fork point):
-     //// branch/remote conventions of this fork and the commit-the-build
-     //// pipeline. Upstream has since added its own CLAUDE.md on develop —
-     //// expect a whole-file conflict at the merge and keep BOTH contents. -->
+<!-- //// Neoffice — added file (no upstream equivalent on version-3): branch/remote
+     //// conventions of this fork and the commit-the-build pipeline. Upstream develop
+     //// ships a CLAUDE.md of its own (a symlink to AGENTS.md); if the fork ever
+     //// follows develop again, keep this file and import theirs with @AGENTS.md.
+     //// (Rewritten in English at the 2026-09-24 merge; it was in French.) -->
 
-# Git Configuration
+# Neoffice fork conventions
 
-## Branch de production
-- **Branche:** `version-15`
-- **Remote:** `origin` (bvisible)
+## Branches and remotes
 
-## Upstream (lecture seule)
-- **Repo:** https://github.com/frappe/insights.git
-- **Remote:** `upstream`
-- **Branche upstream:** `develop`
-- **Usage:** Pull uniquement pour sync les mises à jour officielles
+- **Production branch:** `version-15` on `origin` (bvisible/insights). The fleet pulls it.
+- **Upstream (read only):** `upstream` → https://github.com/frappe/insights.git,
+  branch **`version-3`** (the release line; `version-3-hotfix` feeds it).
+- Always push to `origin`, never to `upstream`.
+- Sync: `git fetch upstream && git merge upstream/version-3` on a
+  `merge/upstream-version-3-<date>` branch, test on osiris, then fast-forward `version-15`.
+- `NEOFFICE_FORK_MARKERS.md` lists every `////` marker and what to do with it at the next
+  merge. Every change to upstream code carries a `//// Neoffice — <why>` marker.
 
-## Règles
-1. TOUJOURS push sur `origin`, JAMAIS sur `upstream`
-2. Pour sync: `git fetch upstream && git merge upstream/develop`
-3. Branch de travail: `version-15`
+### Why version-3 and not develop (decided 2026-09-24)
+
+Our fleet runs Frappe **v15** (fork `bvisible/frappe`, branch `version-15`). Upstream's
+`develop` now targets Frappe **develop**: its CI tests it there, and its frontend links
+`@framework/ui` to `../../frappe/ui` and imports pieces that exist only in Frappe develop
+(`telemetry`, `components/TrialBanner`). It cannot be built against our frappe. `version-3`
+is the line upstream releases for v15 and v16; it carries the same security fixes and the
+same features that matter here (prebuilt module dashboards and their nudge). Until
+2026-09-24 this fork followed `develop`; both lines share our old base `2a44ecbb`.
 
 ## Build pipeline (commit-the-build)
 
-⚠️ **Ne jamais lancer `yarn build` ou `bench build --app insights` localement sur un serveur Neoffice** (4 GB RAM → OOM-kill garanti). Le build se fait UNIQUEMENT sur GitHub Actions (ubuntu-latest, 16 GB RAM).
+Never run `yarn build` or `bench build --app insights` on a Neoffice server: the instances
+have 2–4 GB of RAM and the vite build is OOM-killed. The SPA build only runs on GitHub
+Actions (`bench build --app insights` still bundles `insights/public/js/*.bundle.js`, the
+desk-side nudge, which is small).
 
-### Comment ça marche
+1. Change a source file under `frontend/`, commit, `git push origin version-15`. Do not build.
+2. `.github/workflows/build-frontend.yml` sees the push, runs `yarn build` on ubuntu-latest
+   (Node 20) and commits the artifacts back as `[skip-build] frontend artifacts for <SHA>`
+   (author `github-actions[bot]`).
+3. On the instances the update pipeline pulls both commits. When `bench build --app insights`
+   runs, the root `package.json` finds the artifacts already present and skips vite.
 
-1. Modif d'un fichier source (`frontend/...`) en local → `git commit` → `git push origin version-15`. **Ne pas builder localement.**
-2. Le workflow `.github/workflows/build-frontend.yml` détecte le push, lance `yarn build` sur ubuntu-latest (~1-2 min) et commit les artefacts back avec un commit `[skip-build] frontend artifacts for <SHA>` (par `github-actions[bot]`).
-3. Sur les instances clients, le pipeline d'update fait `git pull` (ramène ton commit + le commit du bot). Quand `bench build --app insights` tourne, il appelle `yarn build` à la racine — **le `package.json` voit les artefacts déjà présents et skip vite** (gate). Plus d'OOM-kill.
+### Paths
 
-### Paths spécifiques
+- Frontend source: `frontend/` (the v3 app in `frontend/src2/`, the legacy v2 app in
+  `frontend/src/`)
+- Vite artifacts (committed): `insights/public/frontend/`
+- SPA HTML entries (committed): `insights/www/insights.html` and `insights/www/insights_v2.html`,
+  committed together: both are rewritten by every build.
+- Root build script: `cd frontend && yarn build` → `copy-html-entry` + `copy-html-entry2`.
 
-- **Source frontend** : `frontend/`
-- **Artefacts vite (commités)** : `insights/public/frontend/`
-- **SPA HTML(s) (commités)** : `insights/www/insights.html` + `insights/www/insights_v2.html`
-- **Build script root** : `yarn (`cd frontend && yarn build` → `copy-html-entry` + `copy-html-entry2`)`
-
-### Forcer un rebuild local (si vraiment nécessaire)
+### Forcing a local rebuild (on a workstation, never on a server)
 
 ```bash
 FORCE_REBUILD=1 yarn build
 ```
 
-### Documentation complète
+### Further reading
 
-- Doc canonique : `bvisible/neoffice-devops:main` → `docs/COMMIT-BUILD-PATTERN.md`
-- Doc batch migration (12 apps) : même fichier, sections "Apps that have adopted the pattern" + "Edge cases discovered"
-- Vault Obsidian : `[[NORA/04-savoir-faire/drive-frontend-build-pattern]]`
-
-### Edge cases spécifiques à insights
-
-- L'app ship 2 SPA HTMLs : v1 (legacy) + v2 (nouveau dashboard). Les deux doivent être commités atomiquement.
+- Canonical pattern: `bvisible/neoffice-devops:main` → `docs/COMMIT-BUILD-PATTERN.md`
+- Obsidian: `NORA/04-savoir-faire/drive-frontend-build-pattern`

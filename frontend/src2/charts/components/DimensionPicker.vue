@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ChevronDown, Settings, XIcon } from 'lucide-vue-next'
+import { computed, watchEffect } from 'vue'
 import InlineFormControlLabel from '../../components/InlineFormControlLabel.vue'
 import { isDate } from '../../helpers'
-import { COLUMN_TYPES, granularityOptions } from '../../helpers/constants'
+import { COLUMN_TYPES, getDefaultGranularity, getGranularityOptions } from '../../helpers/constants'
 import { Dimension, DimensionOption } from '../../types/query.types'
 import LazyTextInput from '../../components/LazyTextInput.vue'
 
@@ -26,6 +27,23 @@ const dimension = defineModel<Dimension>({
 if (!dimension.value.dimension_name && dimension.value.column_name) {
 	dimension.value.dimension_name = dimension.value.column_name
 }
+
+const granularityOptions = computed(() => getGranularityOptions(dimension.value.data_type))
+
+watchEffect(() => {
+	const allowedGranularities = new Set(granularityOptions.value.map((option) => option.value))
+
+	if (!allowedGranularities.size) {
+		// deleted, not set to `undefined`: a config is stored as JSON, so a key
+		// with no value is a key the next load will not have
+		delete dimension.value.granularity
+		return
+	}
+
+	if (!dimension.value.granularity || !allowedGranularities.has(dimension.value.granularity)) {
+		dimension.value.granularity = getDefaultGranularity(dimension.value.data_type)
+	}
+})
 
 function selectDimension(option?: DimensionOption) {
 	if (!option || !option.column_name) {
@@ -84,10 +102,7 @@ function selectDimension(option?: DimensionOption) {
 			<template #body-main>
 				<div class="flex w-[14rem] flex-col gap-2 p-2">
 					<InlineFormControlLabel label="Label">
-						<LazyTextInput
-							placeholder="Label"
-							v-model="dimension.dimension_name"
-						/>
+						<LazyTextInput placeholder="Label" v-model="dimension.dimension_name" />
 					</InlineFormControlLabel>
 
 					<InlineFormControlLabel label="Type">

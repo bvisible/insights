@@ -28,8 +28,8 @@ def execute():
                     # //// Neoffice — read through get_password(): the field is now a
                     # //// Password on both doctypes, the raw column only holds a mask.
                     # //// (this patch is disabled in patches.txt, kept correct anyway)
-                    # //// (drop once upstream PR the upstream PR from bvisible/insights branch
-# //// upstream/security-hardening-2026-09 is merged into frappe/insights)
+                    # //// (drop once frappe/insights ships the same fix; it is prepared on our branch
+                    # //// upstream/security-hardening-2026-09, not proposed upstream yet)
                     "connection_string": data_source_doc.get_password(
                         "connection_string", raise_exception=False
                     ),

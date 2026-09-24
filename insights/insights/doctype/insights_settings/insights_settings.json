@@ -8,8 +8,10 @@
  "field_order": [
   "onboarding_section",
   "enable_permissions",
+  "allow_download",
   "enable_data_store",
   "apply_user_permissions",
+  "disable_user_lookup",
   "allowed_origins",
   "max_records_to_sync",
   "max_memory_usage",
@@ -75,6 +77,12 @@
    "label": "Enable Permissions"
   },
   {
+   "default": "1",
+   "fieldname": "allow_download",
+   "fieldtype": "Check",
+   "label": "Allow Data Download"
+  },
+  {
    "fieldname": "integrations_section",
    "fieldtype": "Section Break",
    "label": "Integrations"
@@ -125,18 +133,27 @@
    "non_negative": 1
   },
   {
-   "default": "0",
+   "default": "1",
    "fieldname": "enable_data_store",
    "fieldtype": "Check",
    "label": "Enable Data Store"
   },
   {
-   "default": "0",
+   "default": "1",
    "fieldname": "apply_user_permissions",
    "fieldtype": "Check",
    "label": "Apply User Permissions"
   },
   {
+   "default": "0",
+   "description": "Stops members from finding each other by name or email when sharing. Turn this on for a site where anyone can sign up.",
+   "fieldname": "disable_user_lookup",
+   "fieldtype": "Check",
+   "label": "Disable User Lookup"
+  },
+  {
+   "default": "60",
+   "description": "Interactive queries are cancelled after this many seconds. Applies to new connections and to live (non-data-store) queries; background imports are exempt.",
    "fieldname": "max_execution_time",
    "fieldtype": "Int",
    "label": "Max Execution Time (Seconds)"
@@ -145,7 +162,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-01-14 13:17:25.798141",
+ "modified": "2026-04-28 13:08:07.166485",
  "modified_by": "Administrator",
  "module": "Insights",
  "name": "Insights Settings",
@@ -179,6 +196,7 @@
    "share": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],

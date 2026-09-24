@@ -7,8 +7,49 @@ import traceback
 import frappe
 import ibis
 import ibis.expr.types as ir
+from frappe.utils.safe_exec import SERVER_SCRIPT_FILE_PREFIX, safe_exec
 from ibis import selectors as s
 from jedi import Script
+
+# An expression describes a query. It does not move data in or out, so the
+# context holds no name that opens a path, a URL or a backend connection.
+# Expressed as a rule rather than a list, so an ibis release that adds
+# `read_avro` or `to_avro` needs no edit here. Attribute names only -
+# `to_inr(amount)` is a plain name and stays available.
+IO_ATTRIBUTE_PREFIXES = ("read_", "to_", "from_")
+IO_ATTRIBUTE_NAMES = frozenset(
+    {
+        "connect",
+        "get_backend",
+        "set_backend",
+        "register",
+    }
+)
+
+
+def is_io_attribute(name: str) -> bool:
+    return name in IO_ATTRIBUTE_NAMES or name.startswith(IO_ATTRIBUTE_PREFIXES)
+
+
+def assert_expression_has_no_io(expression: str) -> None:
+    """Refuse an expression that names an I/O attribute.
+
+    Checked in the source rather than at evaluation: RestrictedPython compiles
+    `a.b` to a guard call carrying the literal `b` and leaves no `getattr`, so an
+    attribute name is always spelled out here.
+    """
+    try:
+        tree = ast.parse(expression)
+    except SyntaxError:
+        # the caller reports syntax errors with a line and a column
+        return
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Attribute) and is_io_attribute(node.attr):
+            frappe.throw(
+                f"'{node.attr}' is not available in an expression",
+                frappe.PermissionError,
+            )
 
 
 def get_functions():
@@ -72,10 +113,6 @@ def get_functions():
         "range",
         "range_window",
         "rank",
-        "read_csv",
-        "read_delta",
-        "read_json",
-        "read_parquet",
         "row_number",
         "rows_window",
         "schema",
@@ -84,7 +121,6 @@ def get_functions():
         "table",
         "time",
         "timestamp",
-        "to_sql",
         "today",
         "trailing_range_window",
         "trailing_window",
@@ -95,6 +131,8 @@ def get_functions():
     )
     context.ibis = frappe._dict()
     for attr in allowed_ibis_attributes:
+        if is_io_attribute(attr):
+            raise ValueError(f"'{attr}' is an I/O function and does not belong in an expression")
         context.ibis[attr] = getattr(ibis, attr)
 
     return context
@@ -117,7 +155,7 @@ def get_function_list():
 
 
 @frappe.whitelist()
-def get_code_completions(code: str, column_options=None):
+def get_code_completions(code: str, column_options: str | None = None):
     import_statement = """from insights.insights.doctype.insights_data_source_v3.ibis.functions import *\nfrom ibis import selectors as s"""
     code = f"{import_statement}\n\n{code}"
 
@@ -202,7 +240,7 @@ def parse_column_metadata(column_options: str):
     return meta
 
 
-def create_error(line: int, column: int, message: str, hint: str = None):
+def create_error(line: int, column: int, message: str, hint: str | None = None):
     error = {"line": line, "column": column, "message": message}
     if hint:
         error["hint"] = hint
@@ -296,6 +334,12 @@ def validate_names(tree, columns: list[dict]):
     available_functions = set(functions.keys())
     available_columns = {col.get("value") for col in columns}
 
+    # treat locally assigned variables as valid names so that reusing them
+    assigned_vars = {
+        node.id for node in ast.walk(tree) if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store)
+    }
+    available_columns = available_columns | assigned_vars
+
     errors = []
     for node in ast.walk(tree):
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
@@ -348,9 +392,7 @@ def handle_attribute_error(error: AttributeError, line: int = 1):
         if isinstance(obj, ir.Scalar):
             if has_method_on_col:
                 message = f"Type error: Cannot call aggregation '{attr_name}()' on a scalar value."
-                hint = (
-                    f"Hint: '{attr_name}' expects a column but you are applying it to a single value "
-                )
+                hint = f"Hint: '{attr_name}' expects a column but you are applying it to a single value "
             else:
                 message = f"Type error: '{dtype}' data does not support '{attr_name}()'."
 
@@ -358,6 +400,7 @@ def handle_attribute_error(error: AttributeError, line: int = 1):
             message = f"Type error: '{dtype}' columns do not support '{attr_name}()'."
 
     return create_error(line=line, column=0, message=message, hint=hint)
+
 
 def validate_types(expression: str, columns: list[dict]):
     schema = get_ibis_dtype(columns)
@@ -367,11 +410,11 @@ def validate_types(expression: str, columns: list[dict]):
     try:
         validation_table = ibis.table(schema, name="validation_table")
         eval_context = eval_script(validation_table, schema)
-        exec(expression, {"__builtins__": {}}, eval_context)
+        safe_exec(expression, eval_context, restrict_commit_rollback=True)
         return {"is_valid": True, "errors": []}
 
     except (AttributeError, TypeError) as e:
-        _,_,tb = sys.exc_info()
+        _, _, tb = sys.exc_info()
         line = get_error_line(tb)
         error_msg = str(e)
 
@@ -392,17 +435,20 @@ def validate_types(expression: str, columns: list[dict]):
         return {"is_valid": False, "errors": [create_error(line, 0, f"Type error: {error_msg}")]}
 
     except Exception as e:
-        _,_,tb = sys.exc_info()
+        _, _, tb = sys.exc_info()
         line = get_error_line(tb)
-        frappe.log_error(f"Unexpected validation error: {str(e)}")
-        return {"is_valid": False, "errors": [create_error(line, 0, f"Error: {str(e)}")]}
+        frappe.log_error(f"Unexpected validation error: {e!s}")
+        return {"is_valid": False, "errors": [create_error(line, 0, f"Error: {e!s}")]}
+
 
 def get_error_line(tb) -> int:
     if tb:
         for frame in traceback.extract_tb(tb):
-            if frame.filename == "<string>":
+            if frame.filename == "<string>" or frame.filename.startswith(SERVER_SCRIPT_FILE_PREFIX):
                 return frame.lineno
     return 1
+
+
 @frappe.whitelist()
 def validate_expression(expression: str, column_options: str):
     """Main function to validate expression/syntax"""
@@ -414,6 +460,9 @@ def validate_expression(expression: str, column_options: str):
     syntax_result = validate_syntax(expression)
     if not syntax_result["is_valid"]:
         return syntax_result
+
+    # validate_types() below evaluates the expression, so the same rule applies
+    assert_expression_has_no_io(expression)
 
     tree = ast.parse(expression)
     name_result = validate_names(tree, columns)

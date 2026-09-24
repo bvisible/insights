@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { Icon } from 'frappe-ui/icons'
-import { computed, inject, reactive, watchEffect } from 'vue'
+import { computed, inject, reactive, watchEffect, watch } from 'vue'
 import { copy, wheneverChanges } from '../helpers'
 import { FIELDTYPES } from '../helpers/constants'
 import DataTypeIcon from '../query/components/DataTypeIcon.vue'
-import { ColumnDataType } from '../types/query.types'
+import { ColumnDataType, FilterOperator } from '../types/query.types'
 import { WorkbookDashboardFilter } from '../types/workbook.types'
 import { Dashboard } from './dashboard'
 import DashboardFilterEditor from './DashboardFilterEditor.vue'
@@ -14,7 +14,7 @@ const dashboard = inject<Dashboard>('dashboard')!
 const props = defineProps<{ item: WorkbookDashboardFilter }>()
 
 const filter = reactive(copy(props.item))
-watchEffect(() => Object.assign(filter, copy(props.item)))
+watchEffect(() => Object.assign(filter, props.item))
 if (!filter.links) {
 	filter.links = {}
 }
@@ -36,7 +36,9 @@ function stringValuesProvider(search: string) {
 	if (!sourceColumn.value) return Promise.resolve([])
 
 	const firstLinkedChart = Object.keys(filter.links)?.[0]
-	const adhocFilters = firstLinkedChart ? dashboard.getAdhocFilters(firstLinkedChart) : undefined
+	const adhocFilters = firstLinkedChart
+		? dashboard.getAdhocFilters(firstLinkedChart, filter.filter_name)
+		: undefined
 
 	return dashboard.getDistinctColumnValues(
 		sourceColumn.value.query,
@@ -47,6 +49,19 @@ function stringValuesProvider(search: string) {
 }
 
 const filterState = reactive(copy(dashboard.filterStates[filter.filter_name] || {}))
+
+// no `immediate` — on mount, filterState must keep the restored state from dashboard.filterStates
+watch(
+	() => [filter.default_operator, filter.default_value],
+	([op, val]) => {
+		if (op != null && val != null) {
+			filterState.operator = op as FilterOperator
+			filterState.value = val
+		}
+	},
+	{ deep: true },
+)
+
 wheneverChanges(
 	() => filterState,
 	() => {
@@ -100,7 +115,7 @@ const label = computed(() => {
 						:valuesProvider="stringValuesProvider"
 						v-model:operator="filterState.operator"
 						v-model:value="filterState.value"
-						@update:value="() => togglePopover()"
+						@close="() => togglePopover()"
 					>
 					</Filter>
 				</div>

@@ -8,6 +8,7 @@ export type DashboardListItem = {
 	name: string
 	title: string
 	workbook: string
+	folder?: string | null
 	charts: number
 	creation: string
 	modified: string
@@ -21,19 +22,45 @@ export type DashboardListItem = {
 const dashboards = ref<DashboardListItem[]>([])
 
 const loading = ref(false)
-async function fetchDashboards(search_term?: string, limit: number = 50) {
+const mapTimeAgo = (dashboard: any) => ({
+	...dashboard,
+	created_from_now: useTimeAgo(dashboard.creation),
+	modified_from_now: useTimeAgo(dashboard.modified),
+})
+
+export type DashboardScope = 'owned' | 'shared'
+type FetchDashboardsOptions = {
+	search_term?: string
+	favorites?: boolean
+	scope?: DashboardScope
+	limit?: number
+}
+
+// favorites/scope are personal lenses over all accessible dashboards
+async function fetchDashboards({
+	search_term,
+	favorites = false,
+	scope,
+	limit = 0,
+}: FetchDashboardsOptions = {}) {
 	loading.value = true
-	dashboards.value = await call('insights.api.dashboards.get_dashboards', {
+	const result = await call('insights.api.dashboards.get_dashboards', {
 		search_term,
+		get_favorites: favorites,
+		scope,
 		limit,
 	})
-	dashboards.value = dashboards.value.map((dashboard: any) => ({
-		...dashboard,
-		created_from_now: useTimeAgo(dashboard.creation),
-		modified_from_now: useTimeAgo(dashboard.modified),
-	}))
+	dashboards.value = result.map(mapTimeAgo)
 	loading.value = false
-	return dashboards.value
+}
+
+// recents come from the per-user View Log on the server (populated by track_view
+// on every dashboard open), so they span folders and reflect opens from anywhere
+async function fetchRecentDashboards(search_term?: string) {
+	loading.value = true
+	const result = await call('insights.api.dashboards.get_recent_dashboards', { search_term })
+	dashboards.value = result.map(mapTimeAgo)
+	loading.value = false
 }
 
 const updatingPreviewImage = ref<Record<string, boolean>>({})
@@ -60,18 +87,14 @@ async function toggleLike(dashboard_name: string, add: boolean) {
 		name: dashboard_name,
 		add: add ? 'Yes' : 'No',
 	})
-		.then(() => fetchDashboards())
 }
 
 export default function useDashboardStore() {
-	if (!dashboards.value.length) {
-		fetchDashboards()
-	}
-
 	return reactive({
 		dashboards,
 		loading,
 		fetchDashboards,
+		fetchRecentDashboards,
 
 		updatePreviewImage,
 		updatingPreviewImage,

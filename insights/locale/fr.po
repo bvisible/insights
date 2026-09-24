@@ -251,8 +251,8 @@ msgstr "Êtes-vous sûr de vouloir vous déconnecter ?"
 #: frontend/src2/components/UserDropdown.vue:81
 msgid "Are you sure you want to login to your Frappe Cloud dashboard?"
 msgstr ""
-"Êtes-vous sûr de vouloir vous connecter à votre tableau de bord Frappe Cloud"
-" ?"
+"Êtes-vous sûr de vouloir vous connecter à votre tableau de bord Frappe "
+"Cloud ?"
 
 #. Label of the api_authentication_type (Select) field in DocType 'Insights
 #. Data Source v3'
@@ -495,8 +495,8 @@ msgstr "Colonne"
 #: insights/insights/doctype/insights_table_v3/insights_table_v3.json
 msgid ""
 "Column used to track sync progress. Use <b>modified</b> if rows can be "
-"updated (syncs new and changed rows). Use <b>creation</b> if rows are "
-"append-only (syncs only new rows, faster)."
+"updated (syncs new and changed rows). Use <b>creation</b> if rows are append-"
+"only (syncs only new rows, faster)."
 msgstr ""
 "Colonne utilisée pour suivre la progression de la synchronisation. Utilisez "
 "<b>modified</b> si les lignes peuvent être mises à jour (synchronise les "
@@ -2536,8 +2536,7 @@ msgstr "Les données d'exemple et le classeur ont été configurés avec succès
 
 #: frontend/src2/components/DemoDataBanner.vue:27
 msgid "Sample data with workbook has been set up successfully"
-msgstr ""
-"Les données d'exemple avec le classeur ont été configurées avec succès"
+msgstr "Les données d'exemple avec le classeur ont été configurées avec succès"
 
 #. Option for the 'Week Starts On' (Select) field in DocType 'Insights
 #. Settings'
@@ -3357,16 +3356,16 @@ msgid ""
 "Write Python code to fetch and transform data. Available globals:<br>• "
 "client: API client for the selected data source<br>• table: Write data to "
 "warehouse. Methods: insert(data, overwrite=False)<br>• state: Persist data "
-"between runs. Methods: get(key, default=None), set(key, value), delete(key),"
-" clear()<br>• secrets: Access secret keys. Methods: get(key)<br>• "
+"between runs. Methods: get(key, default=None), set(key, value), delete(key), "
+"clear()<br>• secrets: Access secret keys. Methods: get(key)<br>• "
 "log(message): Log execution messages"
 msgstr ""
 "Écrivez du code Python pour récupérer et transformer des données. Variables "
 "globales disponibles :<br>• client : Client API pour la source de données "
 "sélectionnée<br>• table : Écrire des données dans l'entrepôt. Méthodes : "
 "insert(data, overwrite=False)<br>• state : Persister des données entre les "
-"exécutions. Méthodes : get(key, default=None), set(key, value), delete(key),"
-" clear()<br>• secrets : Accéder aux clés secrètes. Méthodes : get(key)<br>• "
+"exécutions. Méthodes : get(key, default=None), set(key, value), delete(key), "
+"clear()<br>• secrets : Accéder aux clés secrètes. Méthodes : get(key)<br>• "
 "log(message) : Journaliser les messages d'exécution"
 
 #: frontend/src2/query/components/UnionSelectorDialog.vue:143
@@ -3581,12 +3580,11 @@ msgstr ""
 "tables en fonction des équipes et utilisateurs."
 
 msgid ""
-"Apply restrictions based on roles and user permissions defined on this site."
-" Only applicable for site data source."
+"Apply restrictions based on roles and user permissions defined on this site. "
+"Only applicable for site data source."
 msgstr ""
 "Appliquer les restrictions basées sur les rôles et permissions utilisateur "
-"définis sur ce site. Applicable uniquement pour la source de données du "
-"site."
+"définis sur ce site. Applicable uniquement pour la source de données du site."
 
 msgid "Create teams to group users and manage permissions."
 msgstr ""
@@ -3600,11 +3598,11 @@ msgstr ""
 "pour des requêtes plus rapides et inter-bases."
 
 msgid ""
-"Set the maximum number of rows per table that will be imported into the data"
-" store. Default is 10,00,000"
+"Set the maximum number of rows per table that will be imported into the data "
+"store. Default is 10,00,000"
 msgstr ""
-"Définir le nombre maximum de lignes par table importées dans l'entrepôt. Par"
-" défaut : 1 000 000"
+"Définir le nombre maximum de lignes par table importées dans l'entrepôt. Par "
+"défaut : 1 000 000"
 
 msgid "Memory Limit"
 msgstr "Limite mémoire"
@@ -3633,8 +3631,8 @@ msgid ""
 "Set the start of the fiscal year for the organization. This will be used to "
 "calculate quarterly and yearly data."
 msgstr ""
-"Définir le début de l'exercice fiscal pour l'organisation. Ceci sera utilisé"
-" pour calculer les données trimestrielles et annuelles."
+"Définir le début de l'exercice fiscal pour l'organisation. Ceci sera utilisé "
+"pour calculer les données trimestrielles et annuelles."
 
 msgid "Select Date"
 msgstr "Sélectionner une date"
@@ -3645,3 +3643,173 @@ msgid ""
 msgstr ""
 "Définir le début de la semaine pour l'organisation. Ceci sera utilisé pour "
 "calculer les données hebdomadaires."
+
+#: insights/insights/doctype/insights_workbook_folder/insights_workbook_folder.py:35
+msgid "A folder cannot be its own parent"
+msgstr ""
+
+#: frontend/src2/dashboard/DashboardList.vue:26
+#: frontend/src2/workbook/WorkbookList.vue:43
+msgid "All"
+msgstr "Tous"
+
+#. Label of the allow_download (Check) field in DocType 'Insights Settings'
+#: insights/insights/doctype/insights_settings/insights_settings.json
+msgid "Allow Data Download"
+msgstr ""
+
+#. Option for the 'Sync Strategy' (Select) field in DocType 'Insights Table v3'
+#: insights/insights/doctype/insights_table_v3/insights_table_v3.json
+msgid "Append Only"
+msgstr ""
+
+#: insights/api/workbooks.py:426
+msgid "Cannot delete a folder that is not empty. Move its contents out first."
+msgstr ""
+
+#. Description of the 'Sync Strategy' (Select) field in DocType 'Insights Table
+#. v3'
+#: insights/insights/doctype/insights_table_v3/insights_table_v3.json
+msgid ""
+"Choose how incremental sync writes rows: <b>Append Only</b> adds new rows, "
+"while <b>Update or Insert</b> updates matching keys and inserts new rows."
+msgstr ""
+
+#: frontend/src2/dashboard/DashboardList.vue:93
+msgid "Dashboards shared with you will show up here."
+msgstr ""
+
+#: frontend/src2/dashboard/DashboardList.vue:83
+msgid "Dashboards you open will show up here."
+msgstr ""
+
+#: frontend/src2/workbook/WorkbookList.vue:160
+msgid "Empty Folder"
+msgstr ""
+
+#. Label of the folder (Link) field in DocType 'Insights Workbook'
+#: frontend/src2/components/FolderCard.vue:24
+#: insights/insights/doctype/insights_workbook/insights_workbook.json
+msgid "Folder"
+msgstr "Dossier"
+
+#: insights/api/workbooks.py:443 insights/api/workbooks.py:456
+msgid "Folder {0} does not exist"
+msgstr ""
+
+#: insights/insights/doctype/insights_workbook_folder/insights_workbook_folder.py:40
+msgid "Folders can only be nested up to {0} levels deep"
+msgstr ""
+
+#. Name of a DocType
+#: insights/insights/doctype/insights_workbook_folder/insights_workbook_folder.json
+msgid "Insights Workbook Folder"
+msgstr ""
+
+#: frontend/src2/dashboard/DashboardList.vue:198
+#: frontend/src2/workbook/WorkbookList.vue:261
+msgid "Load more"
+msgstr "Charger plus"
+
+#: frontend/src2/dashboard/DashboardList.vue:78
+msgid "Mark a dashboard as favorite to see it here."
+msgstr ""
+
+#: frontend/src2/workbook/WorkbookList.vue:250
+msgid "Move to folder"
+msgstr ""
+
+#: frontend/src2/workbook/WorkbookList.vue:105
+msgid "New Folder"
+msgstr "Nouveau Dossier"
+
+#: frontend/src2/dashboard/DashboardList.vue:77
+msgid "No Favorites"
+msgstr ""
+
+#: frontend/src2/dashboard/DashboardList.vue:82
+msgid "No Recents"
+msgstr ""
+
+#: frontend/src2/dashboard/DashboardList.vue:98
+msgid "No folders or dashboards to display."
+msgstr ""
+
+#: frontend/src2/workbook/WorkbookList.vue:162
+msgid "No folders or workbooks here."
+msgstr ""
+
+#: frontend/src2/dashboard/DashboardList.vue:87
+#: frontend/src2/dashboard/DashboardList.vue:92
+#: frontend/src2/dashboard/DashboardList.vue:97
+msgid "Nothing here"
+msgstr ""
+
+#: insights/api/workbooks.py:367
+msgid "Only an Insights Admin can manage workbook folders"
+msgstr ""
+
+#. Label of the parent_folder (Link) field in DocType 'Insights Workbook
+#. Folder'
+#: insights/insights/doctype/insights_workbook_folder/insights_workbook_folder.json
+msgid "Parent Folder"
+msgstr ""
+
+#. Label of the sync_primary_key_column (Data) field in DocType 'Insights Table
+#. v3'
+#: insights/insights/doctype/insights_table_v3/insights_table_v3.json
+msgid "Primary Key Column"
+msgstr ""
+
+#: frontend/src2/dashboard/DashboardList.vue:27
+msgid "Recents"
+msgstr "Récents"
+
+#: frontend/src2/dashboard/DashboardList.vue:159
+#: frontend/src2/workbook/WorkbookList.vue:225
+msgid "Search by title"
+msgstr "Rechercher par titre"
+
+#: frontend/src2/dashboard/DashboardList.vue:30
+#: frontend/src2/workbook/WorkbookList.vue:45
+msgid "Shared"
+msgstr "Partagé"
+
+#: frontend/src2/charts/components/FunnelChartConfigForm.vue:51
+msgid "Show Percentage"
+msgstr ""
+
+#. Description of the 'Primary Key Column' (Data) field in DocType 'Insights
+#. Table v3'
+#: insights/insights/doctype/insights_table_v3/insights_table_v3.json
+msgid ""
+"Stable key used to identify the latest version of each logical row during "
+"incremental upserts."
+msgstr ""
+
+#. Label of the sync_strategy (Select) field in DocType 'Insights Table v3'
+#: insights/insights/doctype/insights_table_v3/insights_table_v3.json
+msgid "Sync Strategy"
+msgstr ""
+
+#. Description of the 'Cursor Column' (Data) field in DocType 'Insights Table
+#. v3'
+#: insights/insights/doctype/insights_table_v3/insights_table_v3.json
+msgid ""
+"Temporal column used to detect rows that changed since the last sync. Use "
+"<b>modified</b> for mutable tables and <b>creation</b> for append-only "
+"tables."
+msgstr ""
+
+#: insights/insights/doctype/insights_dashboard_v3/insights_dashboard_v3.py:93
+msgid "This column is not available as a filter on this dashboard"
+msgstr ""
+
+#. Option for the 'Sync Strategy' (Select) field in DocType 'Insights Table v3'
+#: insights/insights/doctype/insights_table_v3/insights_table_v3.json
+msgid "Update or Insert"
+msgstr ""
+
+#: frontend/src2/dashboard/DashboardList.vue:88
+msgid "You haven't created any dashboards yet."
+msgstr ""

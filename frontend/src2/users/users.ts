@@ -2,6 +2,7 @@ import { call } from 'frappe-ui'
 import { reactive, ref } from 'vue'
 import { createToast } from '../helpers/toasts'
 import { showErrorToast } from '../helpers'
+import { __ } from '../translation'
 
 export type User = {
 	name: ''
@@ -25,6 +26,21 @@ async function getUsers(search_term = '') {
 	})
 }
 
+// a search result is a slice of the roster, so it is merged in rather than
+// swapped for it - names already on screen must survive the next keystroke
+const searching = ref(false)
+async function searchUsers(search_term = '') {
+	searching.value = true
+	return call('insights.api.user.get_users', { search_term })
+		.then((res) => {
+			const matches = res as User[]
+			const known = new Set(users.value.map((u) => u.email))
+			users.value = users.value.concat(matches.filter((u) => !known.has(u.email)))
+			return matches
+		})
+		.finally(() => (searching.value = false))
+}
+
 function getUser(email: string) {
 	return users.value.find((user) => user.email === email)
 }
@@ -44,11 +60,11 @@ function inviteUsers(emails: string[]) {
 		.then(() => {
 			getUsers()
 			createToast({
-				title: 'Invitation Sent',
+				title: __('Invitation Sent'),
 				message:
 					emails.length === 1
-						? `Invitation sent to ${emails[0]}`
-						: `Invitations sent to ${emails.length} users`,
+						? __(`Invitation sent to {0}`, emails[0])
+						: __(`Invitations sent to {0} users`, String(emails.length)),
 				variant: 'success',
 			})
 		})
@@ -77,8 +93,8 @@ function updateUser(email: string, data: Partial<UpdateUser>) {
 		.then(() => {
 			getUsers()
 			createToast({
-				title: 'User Updated',
-				message: 'User updated successfully',
+				title: __('User Updated'),
+				message: __('User updated successfully'),
 				variant: 'success',
 			})
 		})
@@ -99,6 +115,8 @@ export default function useUserStore() {
 		users,
 		loading,
 		getUsers,
+		searchUsers,
+		searching,
 		getUser,
 		getName,
 		getImage,

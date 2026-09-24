@@ -9,7 +9,8 @@
 # //// permission level on the instances that carry Custom DocPerm rows for these
 # //// doctypes — see grant_permlevel_access below. Idempotent: a value that is
 # //// already a mask is skipped, and a permission that exists is not added twice.
-# //// (drop once upstream PR bvisible/insights:security-hardening-2026-09 is merged)
+# //// (drop once frappe/insights ships the same fix; it is prepared on our branch
+# //// upstream/security-hardening-2026-09, not proposed upstream yet)
 import frappe
 from frappe.utils.password import set_encrypted_password
 

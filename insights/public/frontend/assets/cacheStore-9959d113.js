@@ -1,0 +1,1 @@
+import{b as i}from"./index-d15e74c7.js";import{k as r}from"./frappe-ui-703d15e1.js";const h=i("insights:cache",()=>{const a=r({});function n(e){return a.value[e]}function u(e,t){a.value[e]=t}const o=r({});function c(e){return o.value[e]}function s(e,t){o.value[e]=t}return{getDataSource:n,setDataSource:u,getTable:c,setTable:s}});export{h as u};

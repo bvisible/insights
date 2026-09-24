@@ -55,6 +55,56 @@ marker in the tree says "drop at the merge".
 commits, except the two removal-only hunks of `frontend/components.d.ts`
 (a regenerated file — see below).
 
+### The 2026-09-24 merge — `upstream/version-3` (v3.14.1), not `develop`
+
+```
+MERGED = eaf6ecddb059199c4f5c8b8aee40496196dac15b
+       = "chore(release): bumped to v3.14.1", upstream/version-3, 2026-09-19
+```
+
+From this merge on, the fork follows **`upstream/version-3`** (see `CLAUDE.md`). The next
+merge-base is `MERGED`, and `git merge upstream/version-3` is the sync.
+
+**Why not `develop`.** A first attempt merged `upstream/develop` (12989a96) and was aborted:
+develop now targets Frappe *develop*. Its frontend links `@framework/ui` to `../../frappe/ui`
+and imports `telemetry` and `components/TrialBanner` from it, which exist only in Frappe
+develop (frappe/frappe `version-15` has a smaller `ui/`, our fork `bvisible/frappe` has none),
+so the SPA cannot be built against our frappe; upstream's own CI tests develop on Frappe
+develop. `version-3` is the line upstream releases for v15, with the same security fixes, the
+four prebuilt workbook templates and the desk nudge towards them.
+
+How each conflict was resolved (1153 upstream commits since `2a44ecbb`, 19 conflicted files):
+
+| file | resolution |
+|---|---|
+| `insights/api/__init__.py`, `insights/api/data_sources.py`, `insights_query_v3.py` | **upstream's**: `check_stored_document()`, `get_permitted_ibis_table()` and `check_referenced_query_access()` replace our three fixes of 2026-09-04. Our `check_if_latest()` staleness half is dropped (not a security property). Upstream refuses an export with an unreadable dependency where ours skipped it; `test_security.py` asserts the refusal. |
+| `ibis_utils.py` | upstream's `apply_sql()`, plus **our CTE guard re-expressed** as `check_cte_shadowing()`, called before `_get_sql_table_names()`. `extract_sql_table_refs()` still drops every reference named like a CTE on version-3 *and* develop; `test_upstream_still_drops_tables_named_like_a_cte` is the canary that says when to drop the guard. |
+| `insights_data_source_v3.json` | upstream's (with its new `ssl_ca` field) + our `Password` fieldtype on `connection_string` and `bigquery_service_account_key` |
+| `insights/patches.txt` | upstream's new entries, our two added patches appended, `copy_data_sources` / `force_sync_tables` still commented (the marker now says why: the first opens with `frappe.db.delete("Insights Data Source v3")`) |
+| `pyproject.toml` | upstream's: its sqlglot/ibis window is now ours, so our explanatory comment went |
+| `insights/locale/fr.po` | ours merged with upstream's by `msgcat --use-first ours theirs`: 713 entries, 685 translated. `main.pot` is upstream's; regenerate both on a bench (`generate-pot-file`, `update-po-files`) |
+| `insights/tests/test_permissions.py` | upstream's real suite (`base.py`, `factories.py`, `permissions_utils.py` now exist) |
+| `test_sql_builder.py`, `test_insights_data_source.py` | deletion kept: dead v2 tests (see below) |
+| `frontend/components.d.ts` | deleted: upstream now gitignores the generated file |
+| `.gitignore` | upstream's new block; ours still un-ignores the build artifacts. The `CLAUDE.md` note went: upstream no longer ignores it |
+| `charts/helpers.ts` | upstream's option builders + `chartTheme()`: the x axis keeps upstream's fiscal-year formatter *and* our label colour; the rewritten funnel is re-hued to clay (`hsl(23 60.6% …)`) and its tooltip, labels and separators follow the theme; the new sankey labels too |
+| `dashboard/Dashboard.vue`, `DashboardList.vue`, `settings/Settings.vue` | upstream's: it now wraps these strings in `__()` itself. Only DashboardList's tab title is still ours |
+| `settings/PermissionsSettings.vue`, `GeneralSettings.vue` | upstream's, re-wrapped in `__()` (the new "Allow Data Download" and "Demo Data" items included); weekday options get a translated label with the English value |
+
+Added in the same merge, each carrying its marker:
+
+- `insights/telemetry_scan.py` — the import of `is_pulse_enabled` is guarded: our frappe fork
+  predates Pulse telemetry and the module is a daily scheduler job. The SPA's Pulse client
+  already degrades to "off" when `frappe.utils.telemetry.pulse.client.boot_config` is missing.
+- `insights/public/js/insights_nudge.bundle.js` — the dashboard titles of the desk nudge are
+  translated at render time.
+- `frontend/src2/index.css` — the clay accent block is now also here (see "One defect that
+  changes the merge" below: it is fixed).
+- `frontend/src2/charts/colors.ts` — the `GRADIENT_COLORS` marker says nobody reads it any more.
+- Runtime shims upstream ships for older Frappe, checked against osiris (frappe
+  `08fbcd537d`): `frappe.concurrency_limiter` and `frappe.utils.preview` are missing on our
+  fork, and upstream falls back on its own for both.
+
 ### What cannot carry a comment
 
 | path | why it is here | what to do at the merge |
@@ -128,7 +178,7 @@ commits, **180 marker lines across 24 files**. `fork_markers.py check --base
 from commit `19cca75b`; it was left as it stands — the tool matches on `////`,
 and rewriting the line would have made this pass non-comment-only.
 
-### Merge forecast — `upstream/develop`, measured 2026-09-04
+### Merge forecast — `upstream/develop`, measured 2026-09-04 (historical: the fork merged `version-3` instead)
 
 Upstream is **1041 commits** ahead of BASE and touches **952 files**; we touch
 247 (216 of them the committed build output). **22 files are touched on both
@@ -177,7 +227,7 @@ The upstream PR is prepared on `bvisible/insights`, branch
 `upstream/security-hardening-2026-09`, cut from `upstream/develop` and carrying no
 `////` marker. Every marker of this pass names it as its removal condition.
 
-### One defect that changes the merge
+### One defect that changes the merge (fixed at the 2026-09-24 merge)
 
 `frontend/src/index.css` is the **legacy v2 app's** stylesheet, imported only by
 `frontend/src/main.js`. The clay accent override (commit `b99326f9`) was put

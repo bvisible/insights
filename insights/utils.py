@@ -13,7 +13,7 @@ from frappe.website.page_renderers.template_page import TemplatePage
 class ResultColumn:
     label: str
     type: str | list[str]
-    options: dict = {}
+    options: dict = {}  # noqa: RUF012
 
     @staticmethod
     def from_args(label, type="String", options=None) -> "ResultColumn":
@@ -30,9 +30,7 @@ class ResultColumn:
         return frappe._dict(
             label=data.get("alias") or data.get("label") or "Unnamed",
             type=data.get("type") or "String",
-            options=data.get("format_option")
-            or data.get("options")
-            or data.get("format_options"),
+            options=data.get("format_option") or data.get("options") or data.get("format_options"),
         )
 
     @classmethod
@@ -140,13 +138,14 @@ def deep_convert_dict_to_dict(d):
     return d
 
 
-def create_execution_log(sql, time_taken=0, query_name=None):
+def create_execution_log(sql, time_taken=0, query_name=None, data_store=False):
     frappe.get_doc(
         {
             "doctype": "Insights Query Execution Log",
             "time_taken": time_taken,
             "query": query_name,
             "sql": sql,
+            "data_store": data_store,
         }
     ).insert(ignore_permissions=True)
 
@@ -156,6 +155,19 @@ def detect_encoding(file_path: str):
     with open(file_path, "rb") as file:
         result = chardet.detect(file.read())
     return result["encoding"]
+
+
+def get_owned_file(filename: str):
+    """Return the File doc, ensuring the caller uploaded it (or is an admin).
+
+    The upload flow only ever reads back a file the caller just uploaded.
+    """
+    from insights.insights.doctype.insights_team.insights_team import is_admin
+
+    file = frappe.get_doc("File", filename)
+    if file.owner != frappe.session.user and not is_admin(frappe.session.user):
+        frappe.throw("You do not have access to this file", frappe.PermissionError)
+    return file
 
 
 def anonymize_data(df, columns_to_anonymize, prefix_by_column=None):
@@ -178,6 +190,35 @@ def anonymize_data(df, columns_to_anonymize, prefix_by_column=None):
         df[column] = prefix + pd.Series(codes).astype(str)
 
     return df
+
+
+# A leading control character can carry a formula past an importer that trims
+# before it parses, so it counts as a trigger. `@`, `+` and `-` also start
+# ordinary data — a handle, a phone number, a text-column negative — so they are
+# quoted only when the value carries the characters a formula needs to call.
+FORMULA_TRIGGERS = ("=", "\t", "\r", "\n")
+AMBIGUOUS_STARTS = ("@", "+", "-")
+CALL_CHARACTERS = frozenset("|!()")
+
+
+def quote_formula(value):
+    """Prefix a value a spreadsheet would evaluate, so it reads as text."""
+    if not isinstance(value, str) or not value:
+        return value
+    if value.startswith(FORMULA_TRIGGERS) or (
+        value.startswith(AMBIGUOUS_STARTS) and CALL_CHARACTERS.intersection(value)
+    ):
+        return "'" + value
+    return value
+
+
+def as_text(df: pd.DataFrame) -> pd.DataFrame:
+    """Return the frame with every cell safe to write to a sheet.
+
+    Values only. A header is the alias the query's author chose, and rewriting
+    it would rename the columns of every export something downstream parses.
+    """
+    return df.map(quote_formula)
 
 
 def xls_to_df(file_path: str) -> list[pd.DataFrame]:
@@ -214,9 +255,7 @@ class InsightsPageRenderer(TemplatePage):
         return super().render()
 
     def set_headers(self):
-        allowed_origins = frappe.db.get_single_value(
-            "Insights Settings", "allowed_origins"
-        )
+        allowed_origins = frappe.db.get_single_value("Insights Settings", "allowed_origins")
         if not allowed_origins:
             return
 
@@ -224,6 +263,29 @@ class InsightsPageRenderer(TemplatePage):
         allowed_origins = allowed_origins.split(",") if allowed_origins else []
         allowed_origins = [origin.strip() for origin in allowed_origins]
         allowed_origins = " ".join(allowed_origins)
-        self.headers[
-            "Content-Security-Policy"
-        ] = f"frame-ancestors 'self' {allowed_origins}"
+        self.headers["Content-Security-Policy"] = f"frame-ancestors 'self' {allowed_origins}"
+
+
+def get_currency_symbols(codes) -> dict:
+    """The symbol for each currency code.
+
+    Codes arrive with each result, so nothing is sent ahead. A code with no Currency
+    row, or with no symbol, prints as the code, the way fmt_money does.
+    `hide_currency_symbol` empties every symbol.
+    """
+    codes = {code for code in codes if code}
+    if not codes or frappe.utils.cint(frappe.defaults.get_global_default("hide_currency_symbol")):
+        return {}
+
+    # one read: a measure pointed at the wrong column names as many codes as rows
+    rows = frappe.db.get_all(
+        "Currency", filters={"name": ("in", list(codes))}, fields=["name", "symbol", "symbol_on_right"]
+    )
+    known = {row.name: row for row in rows}
+    return {
+        code: {
+            "symbol": (known[code].symbol if code in known else None) or code,
+            "symbol_on_right": bool(known[code].symbol_on_right) if code in known else False,
+        }
+        for code in codes
+    }

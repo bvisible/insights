@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, watchEffect } from 'vue'
+import { __ } from '../../translation'
 import { FIELDTYPES } from '../../helpers/constants'
 import { FunnelChartConfig } from '../../types/chart.types'
 import { ColumnOption, Dimension, DimensionOption, Measure } from '../../types/query.types'
@@ -30,7 +31,7 @@ watchEffect(() => {
 })
 
 const discrete_dimensions = computed(() =>
-	props.dimensions.filter((d) => FIELDTYPES.DISCRETE.includes(d.data_type))
+	props.dimensions.filter((d) => FIELDTYPES.DISCRETE.includes(d.data_type)),
 )
 </script>
 
@@ -47,16 +48,7 @@ const discrete_dimensions = computed(() =>
 				v-model="config.value_column"
 				:column-options="props.columnOptions"
 			/>
-			<FormControl
-				v-model="config.label_position"
-				label="Label Position"
-				type="select"
-				:options="[
-					{ label: 'Left', value: 'left' },
-					{ label: 'Right', value: 'right' },
-					{ label: 'Alternate', value: 'alternate' },
-				]"
-			/>
+			<Toggle v-model="config.show_percentage" :label="__('Show Percentage')" />
 		</div>
 	</CollapsibleSection>
 </template>
