@@ -108,16 +108,18 @@ Added in the same merge, each carrying its marker:
 Found by testing the merge on osiris, fixed on the merge branch:
 
 - `ibis_utils.IbisQueryBuilder.use_live_connection` became a property: a site whose data
-  store is off reads its sources live (`950f6e2f`). Upstream sends any query saved with the
+  store is off reads its sources live (`4517bcee`). Upstream sends any query saved with the
   flag off to DuckDB, and since `55afbd6f` that includes native SQL, transpiled from MariaDB:
-  58 native queries on osiris failed (non-aggregated GROUP BY columns, a DATE compared with a
-  string). Only programmatic queries carry the doctype default 0; the editor creates them live.
+  on osiris 24 of the 58 native queries saved with the flag off failed (measured by replaying
+  upstream's path on each: 13 a DATE compared with a string, 8 non-aggregated GROUP BY columns,
+  2 `FIELD()`, 1 other). Only programmatic queries carry the doctype default 0; the editor
+  creates them live.
   Nora now creates its queries live too (nora `8cea2f50`).
-- `insights_nudge.bundle.js` — one `__()` call per line (`3a2172b9`): the gettext extractor
+- `insights_nudge.bundle.js` — one `__()` call per line (`0292a0fd`): the gettext extractor
   skips a call whose string starts on the next line, so the nudge sentence and "Dismiss" never
   reached the catalogue; "Open" carries a context (bare, it took the desk's "Ouvert").
 - `ibis/utils.py` `validate_types` and `insights_workbook.on_trash` — `frappe.log_error` gets a
-  short title and the exception as message (`6cdcdfda`): our frappe caps an Error Log title at
+  short title and the exception as message (`6dea53c5`): our frappe caps an Error Log title at
   140 characters, so a long exception raised from inside the handler.
 - `test_security.py` F3 names its dependency through a `source` operation (`c548c5c1`):
   upstream dropped the `linked_queries` column.

@@ -150,10 +150,11 @@ class IbisQueryBuilder:
     # //// 55afbd6f (in version-3 since the 2026-09-24 merge) native SQL queries are
     # //// transpiled to DuckDB as well. The editor creates every query live, so only
     # //// queries created programmatically (assistant tools, scripts) carry the doctype
-    # //// default 0; on osiris 58 native queries broke at the merge, MariaDB SQL not
-    # //// being DuckDB SQL (non-aggregated GROUP BY columns, a DATE compared with a
-    # //// string). A site whose data store is off reads its sources live, which is what
-    # //// the setting says. Upstream's assignments to the attribute are untouched.
+    # //// default 0. On osiris 24 of the 58 native queries saved that way failed at the
+    # //// merge, MariaDB SQL not being DuckDB SQL (a DATE compared with a string,
+    # //// non-aggregated GROUP BY columns, FIELD()). A site whose data store is off reads
+    # //// its sources live, which is what the setting says. Upstream's assignments to the
+    # //// attribute are untouched.
     # //// Drop once upstream gates the data store on enable_data_store itself.
     @property
     def use_live_connection(self):

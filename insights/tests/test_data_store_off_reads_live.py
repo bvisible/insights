@@ -25,8 +25,8 @@ class TestDataStoreOffReadsLive(FrappeTestCase):
         frappe.db.set_single_value("Insights Settings", "enable_data_store", self.previous)
 
     def test_a_site_without_data_store_reads_live(self):
-        """58 native queries saved with the default 0 broke on osiris: they were sent to
-        a data store the site had never enabled, transpiled to DuckDB."""
+        """On osiris 24 of the 58 native queries saved with the default 0 failed: they were
+        sent to a data store the site had never enabled, transpiled to DuckDB."""
         frappe.db.set_single_value("Insights Settings", "enable_data_store", 0)
         self.assertTrue(IbisQueryBuilder(saved_query(0)).use_live_connection)
 
