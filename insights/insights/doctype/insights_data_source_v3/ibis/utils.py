@@ -437,7 +437,12 @@ def validate_types(expression: str, columns: list[dict]):
     except Exception as e:
         _, _, tb = sys.exc_info()
         line = get_error_line(tb)
-        frappe.log_error(f"Unexpected validation error: {e!s}")
+        # //// Neoffice — title and message split (upstream passed the whole message as
+        # //// the title). Our frappe caps an Error Log title at 140 characters, so a long
+        # //// exception text raises CharacterLengthExceededError from inside this handler
+        # //// and hides the error it was reporting (seen in the test suite on osiris).
+        # //// Drop once frappe truncates the title.
+        frappe.log_error("Insights expression validation failed", f"Unexpected validation error: {e!s}")
         return {"is_valid": False, "errors": [create_error(line, 0, f"Error: {e!s}")]}
 
 

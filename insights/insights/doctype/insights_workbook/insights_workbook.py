@@ -55,7 +55,10 @@ class InsightsWorkbook(Document):
             backup_data = frappe.as_json(self.export())
             self.db_set("data_backup", backup_data)
         except Exception as e:
-            frappe.log_error(f"Failed to backup workbook {self.name}: {e!s}")
+            # //// Neoffice — title and message split (upstream put the exception text in
+            # //// the title). Our frappe caps an Error Log title at 140 characters: a long
+            # //// message would raise from here and abort the deletion this handler lets through.
+            frappe.log_error(f"Failed to backup workbook {self.name}", str(e))
 
         for q in frappe.get_all("Insights Query v3", {"workbook": self.name}):
             frappe.delete_doc("Insights Query v3", q.name, force=True, ignore_permissions=True)
