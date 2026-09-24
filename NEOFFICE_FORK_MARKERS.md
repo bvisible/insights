@@ -105,6 +105,31 @@ Added in the same merge, each carrying its marker:
   `08fbcd537d`): `frappe.concurrency_limiter` and `frappe.utils.preview` are missing on our
   fork, and upstream falls back on its own for both.
 
+Found by testing the merge on osiris, fixed on the merge branch:
+
+- `ibis_utils.IbisQueryBuilder.use_live_connection` became a property: a site whose data
+  store is off reads its sources live (`950f6e2f`). Upstream sends any query saved with the
+  flag off to DuckDB, and since `55afbd6f` that includes native SQL, transpiled from MariaDB:
+  58 native queries on osiris failed (non-aggregated GROUP BY columns, a DATE compared with a
+  string). Only programmatic queries carry the doctype default 0; the editor creates them live.
+  Nora now creates its queries live too (nora `8cea2f50`).
+- `insights_nudge.bundle.js` — one `__()` call per line (`3a2172b9`): the gettext extractor
+  skips a call whose string starts on the next line, so the nudge sentence and "Dismiss" never
+  reached the catalogue; "Open" carries a context (bare, it took the desk's "Ouvert").
+- `ibis/utils.py` `validate_types` and `insights_workbook.on_trash` — `frappe.log_error` gets a
+  short title and the exception as message (`6cdcdfda`): our frappe caps an Error Log title at
+  140 characters, so a long exception raised from inside the handler.
+- `test_security.py` F3 names its dependency through a `source` operation (`c548c5c1`):
+  upstream dropped the `linked_queries` column.
+
+The full suite on a throwaway site (`subtest.local`, 2026-09-24): 732 tests, 3 failures and
+48 errors, none from our changes — 26 need server scripts (disabled on our sites), 12 need a
+`frappe.response.docs` our frappe only sets inside a request, 7 exercise the public-link
+path that runs as its publisher (our frappe checks the session user in `get_list`), 5 are
+test order or features of a newer frappe, and 1 is intended:
+`test_an_insights_admin_still_reads_the_credentials` expects the DSN in clear, ours is a
+`Password` field.
+
 ### What cannot carry a comment
 
 | path | why it is here | what to do at the merge |
