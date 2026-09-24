@@ -82,25 +82,28 @@
 	}
 
 	function render(ws, cfg, anchor) {
+		//// Neoffice — labels computed here, one __() call per line: the gettext
+		//// extractor misses a call whose string sits on the next line, so upstream's
+		//// sentence and "Dismiss" never reached the catalogue. The button label also
+		//// carries a context: a bare __("Open") takes the desk's "Open" status, which
+		//// French renders "Ouvert" instead of "Ouvrir".
+		const suggestion = __("A prebuilt {0} dashboard is available in Insights", [`<b>${esc(cfg.title())}</b>`]);
+		const openLabel = __("Open", null, "Insights dashboard suggestion");
+		const dismissLabel = __("Dismiss");
 		const el = document.createElement("div");
 		el.className = "insights-nudge";
 		el.setAttribute("role", "region");
 		el.setAttribute("aria-label", "Insights dashboard suggestion");
 		el.innerHTML = `
-			<span class="insights-nudge__text">${__(
-				"A prebuilt {0} dashboard is available in Insights",
-				[`<b>${esc(cfg.title())}</b>`],
-			)}</span>
+			<span class="insights-nudge__text">${suggestion}</span>
 			<span class="insights-nudge__actions">
 				<a class="btn btn-default btn-sm insights-nudge__cta" href="${esc(
 					openUrl(cfg),
 				)}" target="_blank" rel="noopener">${frappe.utils.icon(
 					"external-link",
 					"sm",
-				)}${__("Open")}</a>
-				<button type="button" class="btn btn-default btn-sm icon-btn insights-nudge__x" aria-label="${__(
-					"Dismiss",
-				)}">${frappe.utils.icon("x", "sm")}</button>
+				)}${openLabel}</a>
+				<button type="button" class="btn btn-default btn-sm icon-btn insights-nudge__x" aria-label="${dismissLabel}">${frappe.utils.icon("x", "sm")}</button>
 			</span>`;
 		el.querySelector(".insights-nudge__cta").addEventListener("click", () =>
 			track("workspace_dashboard_nudge_clicked", ws, cfg),
