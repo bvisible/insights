@@ -1,7 +1,16 @@
+# //// Neoffice — added import, for the subTest override below.
+import contextlib
+
 import frappe
 from frappe.tests import IntegrationTestCase
 
+# //// Neoffice — added import, used by _callTestMethod and subTest below.
+from frappe.utils.safe_exec import ServerScriptNotEnabled
+
 from insights.tests.factories import as_user, is_visible
+
+# //// Neoffice — added, the skip reason of _callTestMethod and subTest below.
+SERVER_SCRIPTS_OFF = "the fixture needs server scripts (server_script_enabled), off on our sites"
 
 
 class InsightsIntegrationTestCase(IntegrationTestCase):
@@ -45,6 +54,15 @@ class InsightsIntegrationTestCase(IntegrationTestCase):
 
     def setUp(self):
         super().setUp()
+        # //// Neoffice — added. run_doc_method appends to frappe.response.docs, which a
+        # //// request sets up; under our frappe's test runner an earlier test can leave
+        # //// frappe.response without it, and 12 tests died on AttributeError depending on
+        # //// the order they ran in. Drop once our frappe fork's test runner sets it.
+        response = getattr(frappe.local, "response", None)
+        if response is None:
+            frappe.local.response = frappe._dict(docs=[])
+        elif response.get("docs") is None:
+            response["docs"] = []
         self.original_user = frappe.session.user
         self.addCleanup(frappe.set_user, self.original_user)
         frappe.set_user("Administrator")
@@ -64,6 +82,27 @@ class InsightsIntegrationTestCase(IntegrationTestCase):
                 frappe.db.commit()
         finally:
             super().tearDown()
+
+    # //// Neoffice — added. Our sites, and the CI bench, run with server scripts off
+    # //// (server_script_enabled: 0). A script query goes through safe_exec, which then
+    # //// refuses: 26 tests whose fixture is a script query died on ServerScriptNotEnabled
+    # //// before reaching what they test. Such a test is skipped where safe_exec is off
+    # //// and still runs where it is on.
+    def _callTestMethod(self, method):
+        try:
+            return super()._callTestMethod(method)
+        except ServerScriptNotEnabled:
+            self.skipTest(SERVER_SCRIPTS_OFF)
+
+    # //// Neoffice — added, same reason as _callTestMethod: an error inside a subTest is
+    # //// recorded by the subTest itself and never reaches _callTestMethod.
+    @contextlib.contextmanager
+    def subTest(self, msg=None, **params):
+        with super().subTest(msg, **params):
+            try:
+                yield
+            except ServerScriptNotEnabled:
+                self.skipTest(SERVER_SCRIPTS_OFF)
 
     def as_user(self, user):
         return as_user(user)

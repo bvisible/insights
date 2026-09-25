@@ -66,8 +66,12 @@ class TestDataSourceCredentials(InsightsIntegrationTestCase):
 
     def test_an_insights_admin_still_reads_the_credentials(self):
         doc = self.read_as(ADMIN)
-        self.assertEqual(doc.connection_string, CONNECTION_STRING)
-        self.assertEqual(doc.bigquery_service_account_key, SERVICE_ACCOUNT_KEY)
+        # //// Neoffice — our two secrets are Password fields, stored encrypted: the document
+        # //// carries a mask and an admin reads the value through get_password (upstream
+        # //// keeps them in clear behind the permlevel alone).
+        with self.as_user(ADMIN):
+            self.assertEqual(doc.get_password("connection_string"), CONNECTION_STRING)
+            self.assertEqual(doc.get_password("bigquery_service_account_key"), SERVICE_ACCOUNT_KEY)
 
     def test_a_credential_field_is_dropped_from_a_list_field_list(self):
         with self.as_user(USER):

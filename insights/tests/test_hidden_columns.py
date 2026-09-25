@@ -51,6 +51,10 @@ def make_todo(status, priority):
     todo = frappe.get_doc(
         {
             "doctype": "ToDo",
+            # //// Neoffice — added. Our frappe's ToDo.has_permission lets a non System
+            # //// Manager create a ToDo only when it names them (assigned_by / allocated_to),
+            # //// and it checks before assigned_by gets its default: setUpClass died here.
+            "assigned_by": frappe.session.user,
             "description": TOKEN,
             "status": status,
             "priority": priority,

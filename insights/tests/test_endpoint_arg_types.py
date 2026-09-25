@@ -6,6 +6,9 @@ function it decorates, so it read an empty `__annotations__` and checked
 nothing. It now decorates the endpoint itself.
 """
 
+# //// Neoffice — added import, for the skip below.
+import unittest
+
 import frappe
 
 from insights.api.shared import is_public
@@ -65,6 +68,10 @@ class EndpointsCheckArgumentTypes(InsightsIntegrationTestCase):
         with as_user(OWNER), self.assertRaises(TypeError):
             takes_a_name({"title": "not a name"})
 
+    # //// Neoffice — skipped. `require_type_annotated_api_methods` belongs to a newer frappe
+    # //// than our fork: ours whitelists an unannotated method without complaint. Drop once
+    # //// bvisible/frappe carries it.
+    @unittest.skip("our frappe does not enforce require_type_annotated_api_methods")
     def test_an_unannotated_endpoint_is_refused(self):
         """`require_type_annotated_api_methods` is on, so frappe refuses one."""
 
