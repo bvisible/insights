@@ -781,6 +781,7 @@ export function getFunnelChartOptions(config: FunnelChartConfig, result: QueryRe
 	const colors = Array.from({ length: count }, (_, i) => {
 		const ratio = count === 1 ? 0 : i / (count - 1)
 		const l = 52 + (82 - 52) * ratio
+		//// Neoffice — clay hue, see the marker above this ramp.
 		return `hsl(23 60.6% ${l.toFixed(1)}%)`
 	})
 
@@ -817,11 +818,13 @@ export function getFunnelChartOptions(config: FunnelChartConfig, result: QueryRe
 						<div class="font-bold">${value}${pct}</div>
 					</div>`
 			},
+			//// Neoffice — tooltip colours from chartTheme(); upstream hardcodes a light tooltip.
 			backgroundColor: theme.tooltipBg,
 			borderColor: theme.tooltipBorder,
 			borderWidth: 1,
 			padding: [8, 12],
 			textStyle: {
+				//// Neoffice — was '#111827', unreadable on a dark canvas.
 				color: theme.tooltipText,
 				fontSize: 13,
 			},
@@ -901,6 +904,7 @@ export function getFunnelChartOptions(config: FunnelChartConfig, result: QueryRe
 								y: 8,
 								style: {
 									text: valueText,
+									//// Neoffice — was '#111827', unreadable on a dark canvas.
 									fill: theme.tooltipText,
 									fontSize: 16,
 									fontWeight: 500,
@@ -915,6 +919,7 @@ export function getFunnelChartOptions(config: FunnelChartConfig, result: QueryRe
 								y: 32,
 								style: {
 									text: categories[params.dataIndex] || '',
+									//// Neoffice — was '#6b7280', follows the chart theme instead.
 									fill: theme.axisLabel,
 									fontSize: 12,
 									textVerticalAlign: 'top',
@@ -933,6 +938,7 @@ export function getFunnelChartOptions(config: FunnelChartConfig, result: QueryRe
 												y2: api.getHeight(),
 											},
 											style: {
+												//// Neoffice — was '#E5E7EB', invisible on a dark canvas.
 												stroke: theme.axisLine,
 												lineWidth: 1,
 											},

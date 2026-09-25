@@ -87,10 +87,11 @@ async function setupDemoData() {
 			:label="__('Demo Data')"
 			:description="__('Set up sample data and a pre-built workbook to explore Insights features.')"
 		>
+			<!-- //// Neoffice — __() wrapping of the :label below (upstream hardcodes English). -->
 			<Button
+				:label="__('Setup Demo Data')"
 				variant="subtle"
 				size="sm"
-				:label="__('Setup Demo Data')"
 				:loading="demoLoading"
 				@click="setupDemoData"
 			/>
