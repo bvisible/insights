@@ -1719,9 +1719,10 @@ msgstr "Option de format"
 msgid "Format SQL"
 msgstr "Formater le SQL"
 
+# //// Neoffice — the product is called Neoffice, never by its engine's name: this label (desk module, login logo) carried it.
 #: insights/config/desktop.py:11
 msgid "Frappe Insights"
-msgstr "Frappe Insights"
+msgstr "Insights"
 
 #. Label of a Select field in DocType 'Insights Alert'
 #: frontend/src2/query/components/AlertSetupDialog.vue:150
@@ -4962,9 +4963,10 @@ msgstr "dans"
 msgid "{0} (from the query {1})"
 msgstr "{0} (depuis la requête {1})"
 
+# //// Neoffice — the SPA builds « {0} BY {1} » for a summarize step; the translation kept the English « BY ».
 #: frontend/src2/query/helpers.ts:388
 msgid "{0} BY {1}"
-msgstr "{0} BY {1}"
+msgstr "{0} PAR {1}"
 
 #: frontend/src2/migration/v2_migration.ts:361
 msgid "{0} are already being migrated."
