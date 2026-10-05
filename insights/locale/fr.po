@@ -5093,11 +5093,6 @@ msgstr "L'alerte « {0} » a été désactivée."
 msgid "Alert \"{0}\" has been enabled."
 msgstr "L'alerte « {0} » a été activée."
 
-# //// Neoffice — wrapped in __() in the SPA but absent from the catalogue: it showed in English.
-#: frontend/src2/workbook/WorkbookShareDialog.vue:147
-msgid "Can {0}"
-msgstr "Peut {0}"
-
 # //// Neoffice — title or description of a Library template (insights/workbook_templates/*/manifest.json), prepared for the day insights/api/templates.py passes the manifest strings through _(): the SPA prints them raw until then.
 msgid "Inventory Health"
 msgstr "Santé des stocks"
