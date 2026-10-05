@@ -5046,3 +5046,72 @@ msgstr "{0} mis à jour"
 msgid "{0} {1} does not belong to this workbook"
 msgstr "{0} {1} n'appartient pas à ce classeur"
 
+# //// Neoffice — wrapped in __() in the SPA but absent from the catalogue: it showed in English.
+#: frontend/src2/data_source/UploadCSVFileDialog.vue:65
+msgid "Table '{0}' imported successfully"
+msgstr "Table « {0} » importée avec succès"
+
+# //// Neoffice — wrapped in __() in the SPA but absent from the catalogue: it showed in English.
+#: frontend/src2/dashboard/DashboardChartSelectorDialog.vue:95
+msgid "Deselect All ({0})"
+msgstr "Tout désélectionner ({0})"
+
+# //// Neoffice — wrapped in __() in the SPA but absent from the catalogue: it showed in English.
+#: frontend/src2/dashboard/DashboardChartSelectorDialog.vue:96
+msgid "Select All ({0})"
+msgstr "Tout sélectionner ({0})"
+
+# //// Neoffice — wrapped in __() in the SPA but absent from the catalogue: it showed in English.
+#: frontend/src2/teams/TeamResourceSelector.vue:341
+msgid "eg. country == 'India'"
+msgstr "p. ex. country == 'India'"
+
+# //// Neoffice — wrapped in __() in the SPA but absent from the catalogue: it showed in English.
+#: frontend/src2/query/components/AlertSetupDialog.vue:72
+msgid "Alert \"{0}\" has been created."
+msgstr "L'alerte « {0} » a été créée."
+
+# //// Neoffice — wrapped in __() in the SPA but absent from the catalogue: it showed in English.
+#: frontend/src2/query/components/AlertSetupDialog.vue:73
+msgid "Alert \"{0}\" has been updated."
+msgstr "L'alerte « {0} » a été mise à jour."
+
+# //// Neoffice — wrapped in __() in the SPA but absent from the catalogue: it showed in English.
+#: frontend/src2/query/components/AlertSetupDialog.vue:88
+msgid "Alert \"{0}\" has been sent."
+msgstr "L'alerte « {0} » a été envoyée."
+
+# //// Neoffice — wrapped in __() in the SPA but absent from the catalogue: it showed in English.
+#: frontend/src2/query/components/AlertSetupDialog.vue:100
+msgid "Alert \"{0}\" has been disabled."
+msgstr "L'alerte « {0} » a été désactivée."
+
+# //// Neoffice — wrapped in __() in the SPA but absent from the catalogue: it showed in English.
+#: frontend/src2/query/components/AlertSetupDialog.vue:101
+msgid "Alert \"{0}\" has been enabled."
+msgstr "L'alerte « {0} » a été activée."
+
+# //// Neoffice — wrapped in __() in the SPA but absent from the catalogue: it showed in English.
+#: frontend/src2/workbook/WorkbookShareDialog.vue:147
+msgid "Can {0}"
+msgstr "Peut {0}"
+
+# //// Neoffice — title or description of a Library template (insights/workbook_templates/*/manifest.json), prepared for the day insights/api/templates.py passes the manifest strings through _(): the SPA prints them raw until then.
+msgid "Inventory Health"
+msgstr "Santé des stocks"
+
+# //// Neoffice — title or description of a Library template (insights/workbook_templates/*/manifest.json), prepared for the day insights/api/templates.py passes the manifest strings through _(): the SPA prints them raw until then.
+msgid "AR/AP ageing, a collections worklist and a cash-flow view for receivables, payables and cash."
+msgstr "Balance âgée des créances et des dettes, liste de travail pour les encaissements et vue des flux de trésorerie."
+
+# //// Neoffice — title or description of a Library template (insights/workbook_templates/*/manifest.json), prepared for the day insights/api/templates.py passes the manifest strings through _(): the SPA prints them raw until then.
+msgid "Supplier spend, order workload and receiving risk at a glance — spend trend with month-on-month KPIs, spend by item group, top suppliers, purchase-order status mix and an overdue-POs list."
+msgstr "Dépenses fournisseurs, charge de commandes et risques de réception en un coup d'œil : évolution des dépenses avec indicateurs mois par mois, dépenses par groupe d'articles, principaux fournisseurs, répartition des commandes d'achat par statut et liste des commandes en retard."
+
+# //// Neoffice — title or description of a Library template (insights/workbook_templates/*/manifest.json), prepared for the day insights/api/templates.py passes the manifest strings through _(): the SPA prints them raw until then.
+msgid "Revenue, customers and fulfilment at a glance — revenue trend with month-on-month KPIs, top customers and items, a quotation-to-order funnel and an overdue-deliveries list."
+msgstr "Chiffre d'affaires, clients et livraisons en un coup d'œil : évolution du chiffre d'affaires avec indicateurs mois par mois, meilleurs clients et articles, entonnoir devis-commande et liste des livraisons en retard."
+
+# //// Neoffice — title or description of a Library template (insights/workbook_templates/*/manifest.json), prepared for the day insights/api/templates.py passes the manifest strings through _(): the SPA prints them raw until then.
+msgid "Stock value, ageing and reorder health — value by warehouse and item group, incoming vs outgoing movement, a reorder alert list and top items by value."
+msgstr "Valeur du stock, ancienneté et réapprovisionnement : valeur par entrepôt et par groupe d'articles, mouvements entrants et sortants, liste d'alertes de réapprovisionnement et articles de plus grande valeur."
