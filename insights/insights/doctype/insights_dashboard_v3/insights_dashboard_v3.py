@@ -205,6 +205,9 @@ class InsightsDashboardv3(Document):
                     "X-Insights-Preview-Key": key,
                 },
             )
+            if preview is None:
+                # //// Neoffice — no preview service is configured: keep the image the dashboard has.
+                return self.preview_image
             file_url = create_preview_file(preview, self.name)
             random_hash = frappe.generate_hash()[0:4]
             file_url = f"{file_url}?{random_hash}"
@@ -327,7 +330,7 @@ class InsightsDashboardv3(Document):
             capture_share_granted("dashboard", "public", 1)
 
 
-def get_page_preview(url: str, headers: dict | None = None) -> bytes:
+def get_page_preview(url: str, headers: dict | None = None) -> bytes | None:
     # Newer Frappe renders previews in-process via headless Chromium — no
     # external service, and the site's own /assets and /files resolve locally.
     # Older versions fall back to the preview_generator HTTP service.
@@ -339,11 +342,16 @@ def get_page_preview(url: str, headers: dict | None = None) -> bytes:
     return get_preview_from_url(url, wait_for=1000, headers=headers or {}, format="jpeg")
 
 
-def get_page_preview_via_service(url: str, headers: dict | None = None) -> bytes:
-    PREVIEW_GENERATOR_URL = (
-        frappe.conf.preview_generator_url
-        or "https://preview.frappe.cloud/api/method/preview_generator.api.generate_preview_from_url"
-    )
+def get_page_preview_via_service(url: str, headers: dict | None = None) -> bytes | None:
+    # //// Neoffice — no default third-party service. Upstream falls back to preview.frappe.cloud when
+    # //// `preview_generator_url` is not set, and posts it this site's address and the preview key (a read access
+    # //// to the dashboard) each time a dashboard is created or its items change. Our Frappe has no in-process
+    # //// `frappe.utils.preview`, so every dashboard went through that fallback. Without a configured service
+    # //// there is now no preview: the dashboard keeps the image it has and nothing leaves the server.
+    # //// Revert to upstream's default only if a preview service of ours replaces it.
+    PREVIEW_GENERATOR_URL = frappe.conf.preview_generator_url
+    if not PREVIEW_GENERATOR_URL:
+        return None
 
     response = requests.post(
         PREVIEW_GENERATOR_URL,
