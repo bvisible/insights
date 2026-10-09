@@ -330,6 +330,9 @@ class InsightsDashboardv3(Document):
             capture_share_granted("dashboard", "public", 1)
 
 
+# //// Neoffice — widened return type to `bytes | None`: get_page_preview_via_service can now
+# //// return None when no preview service is configured (c6971553 "fix(preview): a dashboard
+# //// preview is never sent to a service nobody configured (#1373)")
 def get_page_preview(url: str, headers: dict | None = None) -> bytes | None:
     # Newer Frappe renders previews in-process via headless Chromium — no
     # external service, and the site's own /assets and /files resolve locally.
