@@ -44,9 +44,11 @@ const cards = computed(() => {
 		const numberValues = numberValuesPerColumn.value[measure_name]
 		const currentValue = numberValues[numberValues.length - 1] || 0
 		const previousValue = numberValues[numberValues.length - 2] || 0
-		const delta = config.value.negative_is_better
-			? previousValue - currentValue
-			: currentValue - previousValue
+		//// Neoffice — neoffice-maintenance#1546: "Negative is better" is inverted ONCE, in the template (the colour). Upstream
+		//// also turned the delta round here (previous - current), so the arrow and the sign of the percentage said the
+		//// opposite of what happened: a fall from 100 to 20 read "↑ 80 %", in red. The delta is now always current -
+		//// previous: a fall is "↓ -80 %", and green when negative is better. Drop only if upstream fixes it itself.
+		const delta = currentValue - previousValue
 		const percentDelta = (delta / Math.abs(previousValue)) * 100
 
 		const decimal = getNumberOption(idx, 'decimal')
