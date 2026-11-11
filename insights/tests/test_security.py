@@ -53,6 +53,15 @@ class TestInsightsSecurity(FrappeTestCase):
         make_insights_user(TEST_USER)
         make_insights_user(OTHER_USER)
 
+    # //// Neoffice — added: the users are made again for each test. tearDown rolls back, so the users setUpClass made
+    # //// were gone after the first test; nothing read them until Insights started to ask for an Insights role
+    # //// (neoffice-maintenance#1195), and F6 then judged a user that no longer existed.
+    def setUp(self):
+        super().setUp()
+        frappe.set_user("Administrator")
+        make_insights_user(TEST_USER)
+        make_insights_user(OTHER_USER)
+
     def tearDown(self):
         frappe.set_user("Administrator")
         frappe.db.rollback()

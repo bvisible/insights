@@ -6,8 +6,9 @@ import frappe
 from frappe.translate import get_all_translations, get_translations_from_apps, get_user_translations
 
 
+# //// Neoffice — the reason on the def line is ours: open to guests, the guard of new web methods asks why (#1195)
 @frappe.whitelist(allow_guest=True, methods=["GET"])
-def get_translations():
+def get_translations():  # permission-check: ok the site's catalogue of interface words, the same for every visitor; no record is read
     language = None
     if frappe.session.user != "Guest":
         language = frappe.db.get_value("User", frappe.session.user, "language")
