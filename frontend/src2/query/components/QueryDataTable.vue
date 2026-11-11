@@ -100,7 +100,8 @@ const currentAlertName = ref('')
 const showExportDialog = ref(false)
 const exportDefaultName = computed(() => {
 	const now = new Date()
-	const ts = `${now.getDate()}_${now.getMonth()}_${now.getFullYear()}`
+	//// Neoffice — getMonth() counts from 0: an export of 5 October was named export_5_9_2026 (neoffice-maintenance#1195)
+	const ts = `${now.getDate()}_${now.getMonth() + 1}_${now.getFullYear()}`
 	return `export_${ts}`
 })
 

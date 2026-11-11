@@ -28,17 +28,20 @@ function toggleLiveConnection(enable: boolean) {
 	<div class="flex flex-col px-3.5 pt-3">
 		<div class="mb-1 flex h-6 items-center justify-between">
 			<div class="flex items-center gap-1">
-				<div class="text-sm font-medium">Details</div>
+				<!-- //// Neoffice — the editor's words go through __() so the catalogue can say them (neoffice-maintenance#1195) -->
+				<div class="text-sm font-medium">{{ __('Details') }}</div>
 			</div>
 			<div></div>
 		</div>
 		<div class="flex flex-shrink-0 flex-col gap-3 border-b px-0.5 pb-3">
-			<InlineFormControlLabel label="Query Title">
-				<LazyTextInput type="text" placeholder="Title" v-model="query.doc.title" />
+			<!-- //// Neoffice — through __() so the catalogue can say it (neoffice-maintenance#1195) -->
+			<InlineFormControlLabel :label="__('Query Title')">
+				<LazyTextInput type="text" :placeholder="__('Title')" v-model="query.doc.title" />
 			</InlineFormControlLabel>
+			<!-- //// Neoffice — through __() so the catalogue can say it (neoffice-maintenance#1195) -->
 			<Toggle
 				v-if="settings.doc.enable_data_store"
-				label="Enable Data Store"
+				:label="__('Enable Data Store')"
 				:modelValue="!query.doc.use_live_connection"
 				@update:modelValue="toggleLiveConnection"
 			/>

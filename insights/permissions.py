@@ -53,6 +53,24 @@ def get_insights_users():
     return users
 
 
+# //// Neoffice — added (no upstream equivalent): whether `user` may read Insights at all. A share « with everyone »
+# //// (the organisation share of a workbook, a dashboard or a chart) is frappe's own, and frappe lets it reach every staff
+# //// account after the controller has said no, so an account without an Insights role listed and opened a workbook
+# //// shared with the organisation (neoffice-maintenance#1195). Insights content belongs to the holders of its roles.
+def holds_insights_role(user=None) -> bool:
+    user = user or frappe.session.user
+    if user == "Administrator":
+        return True
+    return any(role in INSIGHTS_ROLES for role in frappe.get_roles(user))
+
+
+# //// Neoffice — added: the document-level half of holds_insights_role, for the doctypes Insights shares with everyone.
+# //// Their controllers call it from has_permission, which frappe.client.get, /api/resource and the form all go through.
+def deny_without_insights_role(doc, user=None) -> bool:
+    """True when the read must be refused before frappe's sharing is consulted."""
+    return not doc.flags.ignore_permissions and not holds_insights_role(user)
+
+
 class InsightsPermissions:
     def __init__(self, user=None):
         self.user = user or frappe.session.user
@@ -75,6 +93,10 @@ class InsightsPermissions:
         if self.is_admin:
             return ""
 
+        # //// Neoffice — an account without an Insights role reads nothing here, a share with everyone included (#1195)
+        if not holds_insights_role(self.user):
+            return "1=0"
+
         if doctype == "Insights Team":
             if not self.user_teams:
                 return "(`tabInsights Team`.name is NULL)"
@@ -95,6 +117,10 @@ class InsightsPermissions:
 
         if self.is_admin:
             return True
+
+        # //// Neoffice — an account without an Insights role is refused (#1195), see holds_insights_role
+        if not holds_insights_role(self.user):
+            return False
 
         is_new = not doc.name or doc.is_new()
         if is_new and doc.doctype in ["Insights Data Source v3", "Insights Table v3"]:

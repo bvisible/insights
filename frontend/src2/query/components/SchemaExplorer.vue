@@ -99,11 +99,13 @@ const filteredSchema = computed(() => {
 <template>
 	<div class="flex flex-1 flex-col overflow-hidden px-3.5 py-3">
 		<div class="mb-2 flex h-6 flex-shrink-0 items-center justify-between">
-			<div class="text-sm font-medium">Tables</div>
+			<!-- //// Neoffice — the editor's words go through __() so the catalogue can say them (neoffice-maintenance#1195) -->
+			<div class="text-sm font-medium">{{ __('Tables') }}</div>
 		</div>
 		<div class="mb-2 flex-shrink-0">
+			<!-- //// Neoffice — through __() so the catalogue can say it (neoffice-maintenance#1195) -->
 			<FormControl
-				placeholder="Search tables and columns..."
+				:placeholder="__('Search tables and columns...')"
 				v-model="searchQuery"
 				:debounce="300"
 				autocomplete="off"

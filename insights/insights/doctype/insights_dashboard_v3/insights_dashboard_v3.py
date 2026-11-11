@@ -43,6 +43,15 @@ class InsightsDashboardv3(Document):
         workbook: DF.Link
     # end: auto-generated types
 
+    # //// Neoffice — added: an account without an Insights role is refused before frappe's sharing is consulted, a share
+    # //// with everyone included (neoffice-maintenance#1195, see insights.permissions.holds_insights_role).
+    def has_permission(self, permtype="read", *, debug=False, user=None) -> bool:
+        from insights.permissions import deny_without_insights_role
+
+        if deny_without_insights_role(self, user):
+            return False
+        return super().has_permission(permtype, debug=debug, user=user)
+
     def before_validate(self):
         self.sanitize_text_items()
         # linked_charts is derived from items, so build it before anything

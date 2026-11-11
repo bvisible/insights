@@ -23,7 +23,8 @@ const showLineageDialog = ref(false)
 			<template #prefix>
 				<Share2 class="h-4 w-4 text-gray-700" stroke-width="1.5" />
 			</template>
-			Share
+			<!-- //// Neoffice — through __() so the catalogue can say it (neoffice-maintenance#1195) -->
+			{{ __('Share') }}
 		</Button>
 		<!-- <Button
 			v-show="!workbook.islocal && workbook.isdirty"
@@ -46,15 +47,19 @@ const showLineageDialog = ref(false)
 			</template>
 			Save
 		</Button> -->
+		<!-- //// Neoffice — « View Lineage » is offered to the Insights admins only: the server answers get_lineage_graph to
+		them alone (frappe.only_for), and anyone else got an error message (neoffice-maintenance#1195). Upstream offers it to all. -->
 		<Dropdown
 			:button="{ icon: 'more-horizontal', variant: 'outline' }"
 			placement="right"
 			:options="[
-				{
-					label: __('View Lineage'),
-					icon: GitFork,
-					onClick: () => (showLineageDialog = true),
-				},
+				session.user.is_admin
+					? {
+							label: __('View Lineage'),
+							icon: GitFork,
+							onClick: () => (showLineageDialog = true),
+					  }
+					: null,
 				!workbook.doc.read_only
 					? {
 							label: __('Duplicate'),

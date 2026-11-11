@@ -1,0 +1,18 @@
+# //// Neoffice — added file (no upstream equivalent): the nightly French translation of Insights' new strings.
+# //// insights/locale/fr.po is ours, merged with upstream's (NEOFFICE_FORK_MARKERS.md). Without this caller a string
+# //// added or wrapped in __() after the last session's pass stayed in English on the screens (neoffice-maintenance#1195).
+# //// Mechanics in bvisible/neoffice-ci (translate-po.yml): only empty msgstr are filled (Haiku), human translations
+# //// are never touched, a bare word frappe already translates is left to frappe, PO only, commit [skip ci].
+name: Translate
+on:
+  schedule:
+    - cron: "45 2 * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  i18n:
+    uses: bvisible/neoffice-ci/.github/workflows/translate-po.yml@main
+    with:
+      app: insights
+    secrets: inherit
