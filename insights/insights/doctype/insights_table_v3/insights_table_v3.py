@@ -7,6 +7,7 @@ from hashlib import md5
 import frappe
 import ibis
 import sqlglot as sg
+from frappe.model.db_query import DatabaseQuery  # //// Neoffice — get_permission_query, #1546
 from frappe.model.document import Document
 from frappe.permissions import get_valid_perms
 from frappe.query_builder.functions import Count, Max, Sum
@@ -469,9 +470,14 @@ def get_permission_query(doctype, parent_doctype=None, user=None):
     # Used purely as a row filter (semi_join on `name`), so we only need `name` plus the
     # permission WHERE/match conditions. Column-level (permlevel) restrictions are applied
     # separately via apply_column_permissions().
+    #
+    # //// Neoffice — the query is built with `user` from the start. `frappe.get_list` hands
+    # //// `user` to `DatabaseQuery.execute`, which checks read permission with the SESSION user
+    # //// before it reads `user` (frappe v15 db_query.py). A public link runs in a Guest session
+    # //// as its publisher, so it died there with a 403 and the page fell back to the login
+    # //// (neoffice-maintenance#1546). Remove when upstream frappe checks the `user` it is given.
     return str(
-        frappe.get_list(
-            doctype,
+        DatabaseQuery(doctype, user=user).execute(
             fields=["name"],
             order_by=None,
             parent_doctype=parent_doctype,
