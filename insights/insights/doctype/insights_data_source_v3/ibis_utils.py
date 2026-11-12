@@ -167,7 +167,10 @@ class IbisQueryBuilder:
         self._use_live_connection = bool(value)
 
     def set_operations(self):
-        operations = frappe.parse_json(self.operations)
+        # //// Neoffice — a query saved without any operation yet (a new, empty one) has operations NULL: parse_json
+        # //// gives None and build() died on « 'NoneType' object is not iterable » each time it was run
+        # //// (neoffice-maintenance#2404). Upstream has the same line: drop this when upstream guards it.
+        operations = frappe.parse_json(self.operations) or []
         adhoc_filters_by_query = getattr(frappe.local, "insights_adhoc_filters", None) or {}
 
         if (
