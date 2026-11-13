@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  frappe\n"
 "Report-Msgid-Bugs-To: hello@frappe.io\n"
-"POT-Creation-Date: 2026-11-11 11:58+0000\n"
+"POT-Creation-Date: 2026-11-13 02:48+0000\n"
 "PO-Revision-Date: 2026-04-27 11:03+0000\n"
 "Last-Translator: hello@frappe.io\n"
 "Language: fr_FR\n"
@@ -60,19 +60,19 @@ msgstr "1:1"
 msgid "1:N"
 msgstr "1:N"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:675
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:678
 msgid "A SQL column expression cannot read another table"
 msgstr "Une expression de colonne SQL ne peut pas lire une autre table"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:666
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:669
 msgid "A SQL column expression must be a single expression"
 msgstr "Une expression de colonne SQL doit être une expression unique"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:621
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:624
 msgid "A SQL column needs both a name and an expression"
 msgstr "Une colonne SQL a besoin d'un nom et d'une expression"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:627
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:630
 msgid "A SQL column needs the data source its expression is written for"
 msgstr "Une colonne SQL a besoin de la source de données pour laquelle son expression est écrite"
 
@@ -92,7 +92,7 @@ msgstr "Une colonne est additionnée d'une manière que v3 n'a pas."
 msgid "A column it draws is no longer in the query. That part lands empty."
 msgstr "Une colonne qu'il utilise n'est plus dans la requête. Cette partie se retrouve vide."
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:1498
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:1501
 #, python-brace-format
 msgid "A common table expression cannot be named after a restricted table: {0}. Please rename it."
 msgstr "Une expression de table commune ne peut pas porter le nom d'une table réservée : {0}. Veuillez la renommer."
@@ -559,7 +559,7 @@ msgstr "ID du projet BigQuery"
 msgid "BigQuery Service Account Key (JSON)"
 msgstr "Clé de compte de service BigQuery (JSON)"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:477
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:480
 msgid "Both tables must have at least one common column to perform union"
 msgstr "Les deux tables doivent avoir au moins une colonne commune pour effectuer une union"
 
@@ -633,7 +633,7 @@ msgstr "Peut voir"
 msgid "Cancel"
 msgstr "Annuler"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:478
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:481
 msgid "Cannot Perform Union"
 msgstr "Impossible d'effectuer l'union"
 
@@ -737,7 +737,7 @@ msgstr "Choisissez la façon dont la synchronisation incrémentielle écrit les 
 msgid "Circular query reference detected in {0}"
 msgstr "Référence de requête circulaire détectée dans {0}"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:203
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:206
 #, python-brace-format
 msgid "Circular query reference detected while building \"{0}\""
 msgstr "Référence circulaire détectée lors de la construction de « {0} »"
@@ -1622,7 +1622,7 @@ msgstr "Échec de l'import des tables dans l'entrepôt de données"
 msgid "Failed to import {0}"
 msgstr "Échec de l'import de {0}"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:660
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:663
 #, python-brace-format
 msgid "Failed to parse the SQL column expression: {0}"
 msgstr "Échec de l'analyse de l'expression de colonne SQL : {0}"
@@ -1636,11 +1636,11 @@ msgstr "Échec du traitement du fichier téléversé"
 msgid "Failed to setup demo data"
 msgstr "Échec de la configuration des données de démonstration"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:881
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:884
 msgid "Failed to translate SQL query for Data Store execution"
 msgstr "Échec de la traduction de la requête SQL pour l'exécution dans l'entrepôt de données"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:874
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:877
 #, python-brace-format
 msgid "Failed to translate SQL query for Data Store execution: {0}"
 msgstr "Échec de la traduction de la requête SQL pour l'exécution dans l'entrepôt de données : {0}"
@@ -1785,12 +1785,12 @@ msgstr "Général"
 msgid "Generated SQL"
 msgstr "SQL généré"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:1108
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:1111
 #, python-brace-format
 msgid "Granularity {0} is not supported for Time columns. Supported granularities: {1}"
 msgstr "La granularité {0} n'est pas supportée pour les colonnes de type Temps. Granularités supportées : {1}"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:1078
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:1081
 #, python-brace-format
 msgid "Granularity {0} is not supported for {1} columns. Supported granularities: {2}"
 msgstr "La granularité {0} n'est pas supportée pour les colonnes de type {1}. Granularités supportées : {2}"
@@ -2238,7 +2238,7 @@ msgstr "Intégrations"
 msgid "Interactive queries are cancelled after this many seconds. Applies to new connections and to live (non-data-store) queries; background imports are exempt."
 msgstr "Les requêtes interactives sont annulées après ce nombre de secondes. S'applique aux nouvelles connexions et aux requêtes directes (hors entrepôt de données) ; les imports en arrière-plan en sont exemptés."
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:837
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:840
 msgid "Invalid SQL Query"
 msgstr "Requête SQL invalide"
 
@@ -2383,7 +2383,7 @@ msgstr "Joindre une table"
 msgid "Join Telegram Group"
 msgstr "Rejoindre le groupe Telegram"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:422
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:425
 msgid "Join condition is not valid"
 msgstr "La condition de jointure n'est pas valide"
 
@@ -2391,7 +2391,7 @@ msgstr "La condition de jointure n'est pas valide"
 msgid "Join this table with another table or query"
 msgstr "Joindre cette table avec une autre table ou requête"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:359
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:362
 #, python-brace-format
 msgid "Join type {0} is not supported"
 msgstr "Le type de jointure {0} n'est pas supporté"
@@ -2737,7 +2737,7 @@ msgstr "Mensuel"
 msgid "Move from v2"
 msgstr "Déplacer depuis v2"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:851
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:854
 msgid "Multiple SQL statements are not supported for native queries"
 msgstr "Les instructions SQL multiples ne sont pas supportées pour les requêtes natives"
 
@@ -3477,7 +3477,7 @@ msgstr "SQL"
 msgid "SQL column (from v2)"
 msgstr "Colonne SQL (depuis v2)"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:835
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:838
 msgid "SQL query must start with a SELECT or WITH statement"
 msgstr "La requête SQL doit commencer par une instruction SELECT ou WITH"
 
@@ -3536,7 +3536,7 @@ msgstr "Planification (Cron)"
 msgid "Schema"
 msgstr "Schéma"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:895
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:898
 msgid "Schema-qualified table names are not supported for native queries yet"
 msgstr "Les noms de table qualifiés par un schéma ne sont pas encore supportés pour les requêtes natives"
 
@@ -3904,7 +3904,7 @@ msgstr "Empêche les membres de se trouver entre eux par nom ou e-mail lors du p
 msgid "Stored"
 msgstr "Stocké"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:859
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:862
 msgid "Stored procedures are not supported with Data Store for native queries"
 msgstr "Les procédures stockées ne sont pas supportées avec l'entrepôt de données pour les requêtes natives"
 
@@ -4035,7 +4035,7 @@ msgstr "Restrictions de table"
 msgid "Table links updated for {0}"
 msgstr "Liens de table mis à jour pour {0}"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:299
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:302
 msgid "Table or Query not found"
 msgstr "Table ou requête introuvable"
 
@@ -4352,7 +4352,7 @@ msgstr "Titre"
 msgid "Today"
 msgstr "Aujourd'hui"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:462
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:465
 msgid "Too many duplicate columns"
 msgstr "Trop de colonnes en double"
 
@@ -4436,16 +4436,16 @@ msgstr "Nombre distinct de..."
 msgid "Unpivot"
 msgstr "Dé-pivoter"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:1081
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:1111
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:1084
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:1114
 msgid "Unsupported Granularity"
 msgstr "Granularité non supportée"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:853
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:861
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:876
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:883
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:897
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:856
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:864
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:879
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:886
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:900
 msgid "Unsupported SQL Query"
 msgstr "Requête SQL non supportée"
 
