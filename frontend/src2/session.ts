@@ -88,7 +88,21 @@ async function initialize(force: boolean = false) {
 
 async function fetchSessionInfo() {
 	if (!session.isLoggedIn) return
-	const userInfo: SessionUser = await call('insights.api.get_user_info')
+	//// Neoffice — get_user_info itself asks for the Insights User role (maintenance#2651): for a signed-in account
+	//// without it the call answered 403, initialize() threw inside the router's guard and the page stayed blank. A refusal
+	//// says « signed in, not authorised » (is_user and is_admin stay false, the router shows NoPermission); any other
+	//// failure is still thrown.
+	let userInfo: SessionUser
+	try {
+		userInfo = await call('insights.api.get_user_info')
+	} catch (error: any) {
+		if (
+			error?.exc_type === 'PermissionError' ||
+			String(error?.message ?? '').includes('PermissionError')
+		)
+			return
+		throw error
+	}
 	Object.assign(session.user, {
 		...userInfo,
 		is_admin: Boolean(userInfo.is_admin),

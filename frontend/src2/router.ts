@@ -106,6 +106,13 @@ const routes = [
 			isGuestView: true,
 		},
 	},
+	//// Neoffice — added (maintenance#2651): where a signed-in account without an Insights role lands (auth/NoPermission.vue).
+	{
+		path: '/no-permission',
+		name: 'NoPermission',
+		component: () => import('./auth/NoPermission.vue'),
+		meta: { hideSidebar: true },
+	},
 	{
 		path: '/:pathMatch(.*)*',
 		component: () => import('./auth/NotFound.vue'),
@@ -136,6 +143,16 @@ router.beforeEach(async (to, _, next) => {
 		// redirect to frappe login page, for oauth and signup
 		window.location.href = '/login'
 		return next(false)
+	}
+
+	//// Neoffice — upstream checks the sign-in only (maintenance#2651): an account without an Insights role opened a blank
+	//// shell whose every call answered 403, with no message and no way out. It goes to a page that says so; a page open
+	//// to guests (a shared chart or dashboard) stays open to it, since a signed-in account never sees less than a guest.
+	if (!session.isAuthorized && !to.meta.isGuestView && to.name !== 'NoPermission') {
+		return next('/no-permission')
+	}
+	if (session.isAuthorized && to.name === 'NoPermission') {
+		return next('/')
 	}
 
 	to.path === '/login' ? next('/') : next()
