@@ -137,7 +137,8 @@ class TestWorkbookTemplates(InsightsIntegrationTestCase):
 
         self.assertIn(TEMPLATE, templates)
         sales = templates[TEMPLATE]
-        self.assertEqual(sales["title"], TEMPLATE_TITLE)
+        # //// Neoffice — the title comes in the person's language (neoffice-maintenance#1195)
+        self.assertEqual(sales["title"], frappe._(TEMPLATE_TITLE))
         self.assertEqual(sales["module"], TEMPLATE_MODULE)
         self.assertIn("has_data", sales)
         self.assertTrue(sales["notes"])  # technical caveats split out of the description
@@ -146,13 +147,40 @@ class TestWorkbookTemplates(InsightsIntegrationTestCase):
         # required_apps is faked here, so erpnext may not be a real module — the
         # title resolves to "ERPNext" when it is, else falls back to the name.
         self.assertEqual(sales["app"], "erpnext")
-        self.assertIn(sales["app_title"], ("ERPNext", "erpnext"))
+        # //// Neoffice — or the name the site gives its product (System Settings, App Name; #1195)
+        product = frappe.db.get_single_value("System Settings", "app_name")
+        self.assertIn(sales["app_title"], ("ERPNext", "erpnext", product))
         self.assertEqual(sales["version"], TEMPLATE_VERSION)
 
         # a template that ships a preview exposes it as a data URI
         self.assertTrue(
             templates[TEMPLATE_WITH_PREVIEW]["preview_image"].startswith("data:image/png;base64,")
         )
+
+    # //// Neoffice — added (neoffice-maintenance#1195)
+    def test_the_library_speaks_the_persons_language_and_names_the_product(self):
+        """The titles and descriptions were sent as their manifests write them (English on a French site), and
+        the ERP's group was headed « ERPNext », a brand a Neoffice client is never shown."""
+        lang = frappe.local.lang
+        frappe.local.lang = "fr"
+        self.addCleanup(setattr, frappe.local, "lang", lang)
+        read = frappe.db.get_single_value
+
+        def named_product(doctype, field, *args, **kwargs):
+            if (doctype, field) == ("System Settings", "app_name"):
+                return "Neoffice"
+            return read(doctype, field, *args, **kwargs)
+
+        with (
+            self.as_user(USER_1),
+            installed_apps(APPS_WITH_ERPNEXT),
+            patch.object(frappe.db, "get_single_value", side_effect=named_product),
+        ):
+            templates = {t["name"]: t for t in get_workbook_templates()}
+
+        self.assertEqual(templates[TEMPLATE]["title"], "Performance des ventes")
+        self.assertTrue(templates[TEMPLATE_WITH_PREVIEW]["description"].startswith("Valeur du stock"))
+        self.assertEqual(templates[TEMPLATE]["app_title"], "Neoffice")
 
     def test_import_is_shared_site_wide_and_marks_template(self):
         with self.as_user(ADMIN_USER), installed_apps(APPS_WITH_ERPNEXT):

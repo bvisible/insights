@@ -31,6 +31,13 @@ def _app_title(app: str) -> str:
     Falls back to the package name if the title can't be read — doing so imports
     the app, which a not-genuinely-installed app (e.g. one faked in a test) can't
     satisfy, and a broken app shouldn't take down the library."""
+    # //// Neoffice — the ERP's templates are headed by the name the site gives its product (System Settings, App Name:
+    # //// « Neoffice »), not by « ERPNext », a brand a Neoffice client is never shown (neoffice-maintenance#1195).
+    # //// A site that kept Frappe's default name keeps the app's own title.
+    if app == "erpnext":
+        product = frappe.db.get_single_value("System Settings", "app_name")
+        if product and product != "Frappe":
+            return product
     try:
         return (frappe.get_hooks("app_title", app_name=app) or [app])[0]
     except Exception:
@@ -196,8 +203,10 @@ def get_workbook_templates() -> list[dict]:
         templates.append(
             {
                 "name": name,
-                "title": manifest.get("title") or name,
-                "description": manifest.get("description"),
+                # //// Neoffice — in the person's language (neoffice-maintenance#1195): the manifest's English was
+                # //// sent as written, while the catalogue holds each title and description
+                "title": _(manifest.get("title")) if manifest.get("title") else name,
+                "description": _(manifest.get("description")) if manifest.get("description") else None,
                 "notes": manifest.get("notes"),
                 "module": manifest.get("module"),
                 # the app the template is for — its section in the library
