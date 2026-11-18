@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  frappe\n"
 "Report-Msgid-Bugs-To: hello@frappe.io\n"
-"POT-Creation-Date: 2026-11-13 02:48+0000\n"
+"POT-Creation-Date: 2026-11-18 02:48+0000\n"
 "PO-Revision-Date: 2026-04-27 11:03+0000\n"
 "Last-Translator: hello@frappe.io\n"
 "Language: fr_FR\n"
@@ -60,19 +60,19 @@ msgstr "1:1"
 msgid "1:N"
 msgstr "1:N"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:678
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:687
 msgid "A SQL column expression cannot read another table"
 msgstr "Une expression de colonne SQL ne peut pas lire une autre table"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:669
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:678
 msgid "A SQL column expression must be a single expression"
 msgstr "Une expression de colonne SQL doit être une expression unique"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:624
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:633
 msgid "A SQL column needs both a name and an expression"
 msgstr "Une colonne SQL a besoin d'un nom et d'une expression"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:630
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:639
 msgid "A SQL column needs the data source its expression is written for"
 msgstr "Une colonne SQL a besoin de la source de données pour laquelle son expression est écrite"
 
@@ -92,12 +92,12 @@ msgstr "Une colonne est additionnée d'une manière que v3 n'a pas."
 msgid "A column it draws is no longer in the query. That part lands empty."
 msgstr "Une colonne qu'il utilise n'est plus dans la requête. Cette partie se retrouve vide."
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:1501
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:1543
 #, python-brace-format
 msgid "A common table expression cannot be named after a restricted table: {0}. Please rename it."
 msgstr "Une expression de table commune ne peut pas porter le nom d'une table réservée : {0}. Veuillez la renommer."
 
-#: insights/api/v2_migration.py:1037
+#: insights/api/v2_migration.py:1038
 msgid "A dashboard name must be a non-empty string"
 msgstr "Le nom d'un tableau de bord doit être une chaîne non vide"
 
@@ -146,13 +146,9 @@ msgstr "Une jointure n'a pas d'équivalent en v3. Elle est supprimée."
 msgid "A join names no table or no column. v2 skipped it too, so nothing changes."
 msgstr "Une jointure ne nomme ni table ni colonne. v2 l'ignorait aussi, donc rien ne change."
 
-#: insights/api/v2_migration.py:714
+#: insights/api/v2_migration.py:715
 msgid "A migration of this dashboard is already running"
 msgstr "Une migration de ce tableau de bord est déjà en cours"
-
-#: frontend/src2/workbook/WorkbookTemplates.vue:181
-msgid "A newer version is available."
-msgstr "Une version plus récente est disponible."
 
 #: insights/public/js/insights_nudge.bundle.js:90
 #, python-brace-format
@@ -352,7 +348,7 @@ msgstr "Autoriser les utilisateurs à télécharger les résultats des requêtes
 msgid "Allowed Origins"
 msgstr "Origines autorisées"
 
-#: insights/api/v2_migration.py:702
+#: insights/api/v2_migration.py:703
 #, python-brace-format
 msgid "Already migrated into workbook {0}"
 msgstr "Déjà migré dans le classeur {0}"
@@ -475,6 +471,11 @@ msgstr "Êtes-vous sûr de vouloir vous connecter à votre tableau de bord Frapp
 msgid "Array"
 msgstr "Tableau"
 
+#: frontend/src2/auth/NoPermission.vue:13
+#: insights/public/frontend/assets/NoPermission-e978ee1a.js:1
+msgid "Ask your administrator if your work needs them."
+msgstr "Demandez à votre administrateur si votre travail le nécessite."
+
 #. Label of a Select field in DocType 'Insights Data Source v3'
 #: insights/insights/doctype/insights_data_source_v3/insights_data_source_v3.json:218
 msgid "Authentication Type"
@@ -498,6 +499,11 @@ msgstr "Organiser automatiquement les cartes verticalement pour remplir les espa
 #: frontend/src2/charts/components/MeasurePicker.vue:146
 msgid "Average of..."
 msgstr "Moyenne de..."
+
+#: frontend/src2/auth/NoPermission.vue:28
+#: insights/public/frontend/assets/NoPermission-e978ee1a.js:1
+msgid "Back to the desk"
+msgstr "Retour au bureau"
 
 #. Label of a Data field in DocType 'Insights Data Source v3'
 #: insights/insights/doctype/insights_data_source_v3/insights_data_source_v3.json:211
@@ -559,7 +565,7 @@ msgstr "ID du projet BigQuery"
 msgid "BigQuery Service Account Key (JSON)"
 msgstr "Clé de compte de service BigQuery (JSON)"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:480
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:489
 msgid "Both tables must have at least one common column to perform union"
 msgstr "Les deux tables doivent avoir au moins une colonne commune pour effectuer une union"
 
@@ -633,7 +639,7 @@ msgstr "Peut voir"
 msgid "Cancel"
 msgstr "Annuler"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:481
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:490
 msgid "Cannot Perform Union"
 msgstr "Impossible d'effectuer l'union"
 
@@ -737,7 +743,7 @@ msgstr "Choisissez la façon dont la synchronisation incrémentielle écrit les 
 msgid "Circular query reference detected in {0}"
 msgstr "Référence de requête circulaire détectée dans {0}"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:206
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:215
 #, python-brace-format
 msgid "Circular query reference detected while building \"{0}\""
 msgstr "Référence circulaire détectée lors de la construction de « {0} »"
@@ -840,7 +846,7 @@ msgstr "Configuration"
 #: frontend/src2/query/components/JoinSelectorDialog.vue:387
 #: frontend/src2/query/components/UnionSelectorDialog.vue:155
 #: frontend/src2/query/components/source_selector/SourceSelectorDialog.vue:132
-#: insights/public/frontend/assets/main-a8e3b5a3.js:9780
+#: insights/public/frontend/assets/main-b1587ea7.js:9780
 msgid "Confirm"
 msgstr "Confirmer"
 
@@ -908,7 +914,7 @@ msgstr "Convertir en expression"
 msgid "Copied into a v3 workbook."
 msgstr "Copié dans un classeur v3."
 
-#: frontend/src2/helpers/index.ts:304
+#: frontend/src2/helpers/index.ts:302
 msgid "Copied to clipboard"
 msgstr "Copié dans le presse-papiers"
 
@@ -964,7 +970,7 @@ msgstr "Créer une équipe"
 msgid "Create a v3 copy of this dashboard? Your v2 dashboard stays untouched."
 msgstr "Créer une copie v3 de ce tableau de bord ? Votre tableau de bord v2 reste inchangé."
 
-#: frontend/src2/workbook/WorkbookList.vue:203
+#: frontend/src2/workbook/WorkbookList.vue:208
 msgid "Create a workbook, or start from a prebuilt one."
 msgstr "Créez un classeur, ou partez d'un modèle prédéfini."
 
@@ -1065,7 +1071,7 @@ msgstr "Tableau de bord"
 msgid "Dashboard Access Updated"
 msgstr "Accès au tableau de bord mis à jour"
 
-#: insights/api/v2_migration.py:918 insights/api/v2_migration.py:1046
+#: insights/api/v2_migration.py:919 insights/api/v2_migration.py:1047
 #: insights/migrator/v2_workbooks.py:427
 #, python-brace-format
 msgid "Dashboard {0} not found"
@@ -1077,7 +1083,7 @@ msgstr "Tableau de bord {0} introuvable"
 #: frontend/src2/dashboard/DashboardList.vue:134
 #: frontend/src2/dashboard/DashboardList.vue:140
 #: frontend/src2/workbook/WorkbookSidebar.vue:75
-#: insights/public/frontend/assets/main-a8e3b5a3.js:9781
+#: insights/public/frontend/assets/main-b1587ea7.js:9782
 msgid "Dashboards"
 msgstr "Tableaux de bord"
 
@@ -1127,7 +1133,7 @@ msgstr "Source de données"
 #: frontend/src2/data_source/DataSourceList.vue:146
 #: frontend/src2/data_source/DataSourceTable.vue:25
 #: frontend/src2/data_source/DataSourceTableList.vue:65
-#: insights/public/frontend/assets/main-a8e3b5a3.js:9781
+#: insights/public/frontend/assets/main-b1587ea7.js:9782
 msgid "Data Sources"
 msgstr "Sources de données"
 
@@ -1142,8 +1148,8 @@ msgstr "Sources de données | Insights"
 #: frontend/src2/settings/DataStoreSettings.vue:13
 #: frontend/src2/settings/Settings.vue:58
 #: insights/insights/doctype/insights_query_execution_log/insights_query_execution_log.json:56
-#: insights/public/frontend/assets/DataStoreSettings-76a3a47a.js:1
-#: insights/public/frontend/assets/main-a8e3b5a3.js:9781
+#: insights/public/frontend/assets/DataStoreSettings-b0524302.js:1
+#: insights/public/frontend/assets/main-b1587ea7.js:9782
 msgid "Data Store"
 msgstr "Entrepôt de données"
 
@@ -1243,7 +1249,7 @@ msgid "Demo Data Ready"
 msgstr "Données de démonstration prêtes"
 
 #: frontend/src2/query/components/QueryInfo.vue:32
-#: insights/public/frontend/assets/WorkbookQuery-1591f8a4.js:16
+#: insights/public/frontend/assets/WorkbookQuery-13bfdae1.js:16
 msgid "Details"
 msgstr ""
 
@@ -1378,7 +1384,7 @@ msgid "Email Sent At"
 msgstr "Email envoyé le"
 
 #: frontend/src2/workbook/WorkbookSidebarFolders.vue:280
-#: insights/public/frontend/assets/Workbook-d8ab5e7c.js:26
+#: insights/public/frontend/assets/Workbook-9adc8b4e.js:26
 msgid "Empty"
 msgstr "Vide"
 
@@ -1388,7 +1394,7 @@ msgstr "Vide - Cliquez sur « Ajouter un filtre » pour ajouter un filtre"
 
 #: frontend/src2/settings/DataStoreSettings.vue:17
 #: frontend/src2/settings/PermissionsSettings.vue:88
-#: insights/public/frontend/assets/DataStoreSettings-76a3a47a.js:1
+#: insights/public/frontend/assets/DataStoreSettings-b0524302.js:1
 msgid "Enable"
 msgstr "Activer"
 
@@ -1399,7 +1405,7 @@ msgstr "Activer l'alerte"
 #. Label of a Check field in DocType 'Insights Settings'
 #: frontend/src2/query/components/QueryInfo.vue:44
 #: insights/insights/doctype/insights_settings/insights_settings.json:139
-#: insights/public/frontend/assets/WorkbookQuery-1591f8a4.js:16
+#: insights/public/frontend/assets/WorkbookQuery-13bfdae1.js:16
 msgid "Enable Data Store"
 msgstr "Activer l'entrepôt de données"
 
@@ -1418,7 +1424,7 @@ msgid "Enable permissions to restrict access to data sources & tables based on t
 msgstr "Activer les permissions pour restreindre l'accès aux sources de données et tables en fonction des équipes et utilisateurs."
 
 #: frontend/src2/settings/DataStoreSettings.vue:18
-#: insights/public/frontend/assets/DataStoreSettings-76a3a47a.js:1
+#: insights/public/frontend/assets/DataStoreSettings-b0524302.js:1
 msgid "Enable the data store to store database tables into a duckdb database for faster & cross-database queries."
 msgstr "Activer l'entrepôt de données pour stocker les tables dans une base DuckDB pour des requêtes plus rapides et inter-bases."
 
@@ -1478,13 +1484,13 @@ msgstr "Saisissez votre texte ici..."
 
 #. Label of a Text field in DocType 'Insights Table Import'
 #. Label of a Code field in DocType 'Insights Table Import Log'
-#: frontend/src2/helpers/index.ts:146
+#: frontend/src2/helpers/index.ts:144
 #: insights/insights/doctype/insights_table_import/insights_table_import.json:93
 #: insights/insights/doctype/insights_table_import_log/insights_table_import_log.json:135
 msgid "Error"
 msgstr "Erreur"
 
-#: frontend/src2/helpers/index.ts:276
+#: frontend/src2/helpers/index.ts:274
 msgid "Error parsing JSON"
 msgstr "Erreur lors de l'analyse du JSON"
 
@@ -1592,7 +1598,7 @@ msgstr "Échec de la mise à jour des variables"
 msgid "Failed to build query"
 msgstr "Échec de la construction de la requête"
 
-#: frontend/src2/helpers/index.ts:304
+#: frontend/src2/helpers/index.ts:302
 msgid "Failed to copy to clipboard"
 msgstr "Échec de la copie dans le presse-papiers"
 
@@ -1617,12 +1623,12 @@ msgstr "Échec de l'import de la table"
 msgid "Failed to import tables to data store"
 msgstr "Échec de l'import des tables dans l'entrepôt de données"
 
-#: frontend/src2/workbook/WorkbookTemplates.vue:64
+#: frontend/src2/workbook/WorkbookTemplates.vue:68
 #, python-brace-format
 msgid "Failed to import {0}"
 msgstr "Échec de l'import de {0}"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:663
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:672
 #, python-brace-format
 msgid "Failed to parse the SQL column expression: {0}"
 msgstr "Échec de l'analyse de l'expression de colonne SQL : {0}"
@@ -1636,16 +1642,16 @@ msgstr "Échec du traitement du fichier téléversé"
 msgid "Failed to setup demo data"
 msgstr "Échec de la configuration des données de démonstration"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:884
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:895
 msgid "Failed to translate SQL query for Data Store execution"
 msgstr "Échec de la traduction de la requête SQL pour l'exécution dans l'entrepôt de données"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:877
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:888
 #, python-brace-format
 msgid "Failed to translate SQL query for Data Store execution: {0}"
 msgstr "Échec de la traduction de la requête SQL pour l'exécution dans l'entrepôt de données : {0}"
 
-#: frontend/src2/workbook/WorkbookTemplates.vue:104
+#: frontend/src2/workbook/WorkbookTemplates.vue:108
 #, python-brace-format
 msgid "Failed to update {0}"
 msgstr "Échec de la mise à jour de {0}"
@@ -1785,12 +1791,17 @@ msgstr "Général"
 msgid "Generated SQL"
 msgstr "SQL généré"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:1111
+#: frontend/src2/auth/NoPermission.vue:29
+#: insights/public/frontend/assets/NoPermission-e978ee1a.js:1
+msgid "Go to my account"
+msgstr "Aller à mon compte"
+
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:1152
 #, python-brace-format
 msgid "Granularity {0} is not supported for Time columns. Supported granularities: {1}"
 msgstr "La granularité {0} n'est pas supportée pour les colonnes de type Temps. Granularités supportées : {1}"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:1081
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:1122
 #, python-brace-format
 msgid "Granularity {0} is not supported for {1} columns. Supported granularities: {2}"
 msgstr "La granularité {0} n'est pas supportée pour les colonnes de type {1}. Granularités supportées : {2}"
@@ -1871,7 +1882,7 @@ msgid "If the script returns a list of lists, its first row becomes data in v3. 
 msgstr "Si le script renvoie une liste de listes, sa première ligne devient les données dans v3. Renvoyez plutôt un DataFrame."
 
 #: frontend/src2/data_store/ImportTableDialog.vue:93
-#: frontend/src2/workbook/WorkbookTemplates.vue:213
+#: frontend/src2/workbook/WorkbookTemplates.vue:219
 msgid "Import"
 msgstr "Importer"
 
@@ -1918,7 +1929,7 @@ msgstr "La tâche d'import a été mise en file d'attente"
 msgid "Import to Warehouse"
 msgstr "Importer dans l'entrepôt"
 
-#: frontend/src2/workbook/WorkbookTemplates.vue:190
+#: frontend/src2/workbook/WorkbookTemplates.vue:195
 msgid "Imported"
 msgstr "Importé"
 
@@ -2238,7 +2249,7 @@ msgstr "Intégrations"
 msgid "Interactive queries are cancelled after this many seconds. Applies to new connections and to live (non-data-store) queries; background imports are exempt."
 msgstr "Les requêtes interactives sont annulées après ce nombre de secondes. S'applique aux nouvelles connexions et aux requêtes directes (hors entrepôt de données) ; les imports en arrière-plan en sont exemptés."
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:840
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:851
 msgid "Invalid SQL Query"
 msgstr "Requête SQL invalide"
 
@@ -2383,7 +2394,7 @@ msgstr "Joindre une table"
 msgid "Join Telegram Group"
 msgstr "Rejoindre le groupe Telegram"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:425
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:434
 msgid "Join condition is not valid"
 msgstr "La condition de jointure n'est pas valide"
 
@@ -2391,7 +2402,7 @@ msgstr "La condition de jointure n'est pas valide"
 msgid "Join this table with another table or query"
 msgstr "Joindre cette table avec une autre table ou requête"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:362
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:371
 #, python-brace-format
 msgid "Join type {0} is not supported"
 msgstr "Le type de jointure {0} n'est pas supporté"
@@ -2520,8 +2531,8 @@ msgstr "Table de gauche"
 msgid "Legacy"
 msgstr "Ancien"
 
-#: frontend/src2/workbook/WorkbookList.vue:150
-#: frontend/src2/workbook/WorkbookList.vue:210
+#: frontend/src2/workbook/WorkbookList.vue:152
+#: frontend/src2/workbook/WorkbookList.vue:215
 msgid "Library"
 msgstr "Bibliothèque"
 
@@ -2543,12 +2554,12 @@ msgid "Links"
 msgstr "Liens"
 
 #: frontend/src2/dashboard/DashboardCard.vue:46
-#: insights/public/frontend/assets/DashboardList-ba4ff609.js:11
+#: insights/public/frontend/assets/DashboardList-c55c2d06.js:11
 msgid "Load Preview"
 msgstr "Charger l'aperçu"
 
 #: frontend/src2/dashboard/DashboardList.vue:177
-#: frontend/src2/workbook/WorkbookList.vue:234
+#: frontend/src2/workbook/WorkbookList.vue:239
 msgid "Load more"
 msgstr "Charger plus"
 
@@ -2650,7 +2661,7 @@ msgid "Measure Name"
 msgstr "Nom de la mesure"
 
 #: frontend/src2/settings/DataStoreSettings.vue:33
-#: insights/public/frontend/assets/DataStoreSettings-76a3a47a.js:1
+#: insights/public/frontend/assets/DataStoreSettings-b0524302.js:1
 msgid "Memory Limit"
 msgstr "Limite mémoire"
 
@@ -2671,7 +2682,7 @@ msgstr "Message"
 msgid "Migrate"
 msgstr "Migrer"
 
-#: insights/api/v2_migration.py:1029
+#: insights/api/v2_migration.py:1030
 #, python-brace-format
 msgid "Migrate at most {0} dashboards at a time, not {1}"
 msgstr "Migrez au maximum {0} tableaux de bord à la fois, pas {1}"
@@ -2737,7 +2748,7 @@ msgstr "Mensuel"
 msgid "Move from v2"
 msgstr "Déplacer depuis v2"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:854
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:865
 msgid "Multiple SQL statements are not supported for native queries"
 msgstr "Les instructions SQL multiples ne sont pas supportées pour les requêtes natives"
 
@@ -2757,7 +2768,7 @@ msgstr "N:N"
 msgid "Name"
 msgstr "Nom"
 
-#: insights/api/v2_migration.py:1025
+#: insights/api/v2_migration.py:1026
 msgid "Name at least one dashboard"
 msgstr "Nommez au moins un tableau de bord"
 
@@ -2792,8 +2803,8 @@ msgid "New Team"
 msgstr "Nouvelle équipe"
 
 #: frontend/src2/home/HomeQuickActions.vue:28
-#: frontend/src2/workbook/WorkbookList.vue:159
-#: frontend/src2/workbook/WorkbookList.vue:220
+#: frontend/src2/workbook/WorkbookList.vue:164
+#: frontend/src2/workbook/WorkbookList.vue:225
 msgid "New Workbook"
 msgstr "Nouveau classeur"
 
@@ -2831,8 +2842,8 @@ msgstr "Aucune table trouvée"
 msgid "No Tables Stored"
 msgstr "Aucune table stockée"
 
-#: frontend/src2/workbook/WorkbookList.vue:119
-#: frontend/src2/workbook/WorkbookList.vue:198
+#: frontend/src2/workbook/WorkbookList.vue:121
+#: frontend/src2/workbook/WorkbookList.vue:203
 msgid "No Workbooks"
 msgstr "Aucun classeur"
 
@@ -2857,7 +2868,7 @@ msgstr "Aucun tableau de bord ne correspond à votre recherche."
 msgid "No dashboards to display."
 msgstr "Aucun tableau de bord à afficher."
 
-#: frontend/src2/workbook/WorkbookTemplates.vue:171
+#: frontend/src2/workbook/WorkbookTemplates.vue:175
 msgid "No data found on this site — dashboards may look empty."
 msgstr "Aucune donnée trouvée sur ce site — les tableaux de bord peuvent sembler vides."
 
@@ -2905,7 +2916,7 @@ msgstr "Aucun utilisateur."
 msgid "No v2 Dashboards"
 msgstr "Aucun tableau de bord v2"
 
-#: insights/api/v2_migration.py:691
+#: insights/api/v2_migration.py:692
 msgid "No v2 dashboard answers to this name"
 msgstr "Aucun tableau de bord v2 ne répond à ce nom"
 
@@ -2913,8 +2924,8 @@ msgstr "Aucun tableau de bord v2 ne répond à ce nom"
 msgid "No workbooks created"
 msgstr "Aucun classeur créé"
 
-#: frontend/src2/workbook/WorkbookList.vue:120
-#: frontend/src2/workbook/WorkbookList.vue:204
+#: frontend/src2/workbook/WorkbookList.vue:122
+#: frontend/src2/workbook/WorkbookList.vue:209
 msgid "No workbooks to display."
 msgstr "Aucun classeur à afficher."
 
@@ -2973,7 +2984,7 @@ msgstr "Ancien nom"
 msgid "Onboarding Complete"
 msgstr "Intégration terminée"
 
-#: frontend/src2/workbook/WorkbookTemplates.vue:202
+#: frontend/src2/workbook/WorkbookTemplates.vue:208
 msgid "Open"
 msgstr "Ouvrir"
 
@@ -3231,7 +3242,7 @@ msgid "Query Result Limit"
 msgstr "Limite de résultats de la requête"
 
 #: frontend/src2/query/components/QueryInfo.vue:38
-#: insights/public/frontend/assets/WorkbookQuery-1591f8a4.js:16
+#: insights/public/frontend/assets/WorkbookQuery-13bfdae1.js:16
 msgid "Query Title"
 msgstr "Titre de la requête"
 
@@ -3273,7 +3284,7 @@ msgstr "Règles de classement"
 msgid "Ready to migrate"
 msgstr "Prêt à migrer"
 
-#: frontend/src2/workbook/WorkbookTemplates.vue:117
+#: frontend/src2/workbook/WorkbookTemplates.vue:121
 msgid "Ready-made dashboards bundled with your installed apps. Import one to add it to your workbooks — it becomes available to everyone on your site."
 msgstr "Tableaux de bord prêts à l'emploi fournis avec vos applications installées. Importez-en un pour l'ajouter à vos classeurs — il devient disponible pour tout le monde sur votre site."
 
@@ -3349,7 +3360,12 @@ msgstr "Supprimer le tri"
 msgid "Rename"
 msgstr "Renommer"
 
-#: frontend/src2/workbook/WorkbookTemplates.vue:227
+#: insights/insights/query_utils.py:96
+#, python-brace-format
+msgid "Rename the alias {0}: it is the full name of a table the query reads"
+msgstr "Renommez l'alias {0} : il correspond au nom complet d'une table lue par la requête"
+
+#: frontend/src2/workbook/WorkbookTemplates.vue:233
 msgid "Replace your changes?"
 msgstr "Remplacer vos modifications ?"
 
@@ -3422,7 +3438,7 @@ msgstr "Table de droite"
 #: frontend/src2/settings/DataStoreSettings.vue:25
 #: insights/insights/doctype/insights_table_import_log/insights_table_import_log.json:101
 #: insights/insights/doctype/insights_table_v3/insights_table_v3.json:86
-#: insights/public/frontend/assets/DataStoreSettings-76a3a47a.js:1
+#: insights/public/frontend/assets/DataStoreSettings-b0524302.js:1
 msgid "Row Limit"
 msgstr "Limite de lignes"
 
@@ -3477,7 +3493,7 @@ msgstr "SQL"
 msgid "SQL column (from v2)"
 msgstr "Colonne SQL (depuis v2)"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:838
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:849
 msgid "SQL query must start with a SELECT or WITH statement"
 msgstr "La requête SQL doit commencer par une instruction SELECT ou WITH"
 
@@ -3536,10 +3552,6 @@ msgstr "Planification (Cron)"
 msgid "Schema"
 msgstr "Schéma"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:898
-msgid "Schema-qualified table names are not supported for native queries yet"
-msgstr "Les noms de table qualifiés par un schéma ne sont pas encore supportés pour les requêtes natives"
-
 #. Label of a Code field in DocType 'Insights Query'
 #. Label of a Code field in DocType 'Insights Table Import Job'
 #: insights/insights/doctype/insights_query/insights_query.json:209
@@ -3574,7 +3586,7 @@ msgstr "Rechercher par nom"
 
 #: frontend/src2/dashboard/DashboardList.vue:147
 #: frontend/src2/settings/V2MigrationSettings.vue:341
-#: frontend/src2/workbook/WorkbookList.vue:177
+#: frontend/src2/workbook/WorkbookList.vue:182
 msgid "Search by title"
 msgstr "Rechercher par titre"
 
@@ -3583,7 +3595,7 @@ msgid "Search nodes\\u2026"
 msgstr "Rechercher des nœuds…"
 
 #: frontend/src2/query/components/SchemaExplorer.vue:108
-#: insights/public/frontend/assets/WorkbookQuery-1591f8a4.js:16
+#: insights/public/frontend/assets/WorkbookQuery-13bfdae1.js:16
 msgid "Search tables and columns..."
 msgstr "Rechercher des tables et des colonnes..."
 
@@ -3686,12 +3698,12 @@ msgid "Set Insights v2 as default"
 msgstr "Définir Insights v2 par défaut"
 
 #: frontend/src2/settings/DataStoreSettings.vue:34
-#: insights/public/frontend/assets/DataStoreSettings-76a3a47a.js:1
+#: insights/public/frontend/assets/DataStoreSettings-b0524302.js:1
 msgid "Set the maximum memory usage while importing tables into the data store. Default is 512MB"
 msgstr "Définir l'utilisation mémoire maximale lors de l'import des tables. Par défaut : 512 Mo"
 
 #: frontend/src2/settings/DataStoreSettings.vue:26
-#: insights/public/frontend/assets/DataStoreSettings-76a3a47a.js:1
+#: insights/public/frontend/assets/DataStoreSettings-b0524302.js:1
 msgid "Set the maximum number of rows per table that will be imported into the data store. Default is 10,00,000"
 msgstr "Définir le nombre maximum de lignes par table importées dans l'entrepôt. Par défaut : 1 000 000"
 
@@ -3904,7 +3916,7 @@ msgstr "Empêche les membres de se trouver entre eux par nom ou e-mail lors du p
 msgid "Stored"
 msgstr "Stocké"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:862
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:873
 msgid "Stored procedures are not supported with Data Store for native queries"
 msgstr "Les procédures stockées ne sont pas supportées avec l'entrepôt de données pour les requêtes natives"
 
@@ -4035,7 +4047,12 @@ msgstr "Restrictions de table"
 msgid "Table links updated for {0}"
 msgstr "Liens de table mis à jour pour {0}"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:302
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:912
+#, python-brace-format
+msgid "Table names with a dot are not supported for native queries: {0}"
+msgstr "Les noms de tables contenant un point ne sont pas pris en charge pour les requêtes natives : {0}"
+
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:311
 msgid "Table or Query not found"
 msgstr "Table ou requête introuvable"
 
@@ -4047,7 +4064,7 @@ msgstr "La table {0} n'est pas {1}.{2}"
 #. Label of a Table field in DocType 'Insights Query'
 #: frontend/src2/query/components/SchemaExplorer.vue:103
 #: insights/insights/doctype/insights_query/insights_query.json:103
-#: insights/public/frontend/assets/WorkbookQuery-1591f8a4.js:16
+#: insights/public/frontend/assets/WorkbookQuery-13bfdae1.js:16
 msgid "Tables"
 msgstr "Tables"
 
@@ -4137,7 +4154,7 @@ msgstr "L'axe horizontal n'a pas de colonne. Le graphique se retrouve vide."
 msgid "The label and value columns are not set. The chart lands empty."
 msgstr "Les colonnes d'étiquette et de valeur ne sont pas définies. Le graphique se retrouve vide."
 
-#: insights/api/v2_migration.py:1065
+#: insights/api/v2_migration.py:1066
 msgid "The migration finished without creating a dashboard"
 msgstr "La migration s'est terminée sans créer de tableau de bord"
 
@@ -4250,7 +4267,7 @@ msgstr "Ce contenu ne nomme aucun utilisateur pour son exécution."
 msgid "This dashboard could not be read. Migrate it on its own to see why."
 msgstr "Ce tableau de bord n'a pas pu être lu. Migrez-le seul pour comprendre pourquoi."
 
-#: frontend/src2/workbook/WorkbookTemplates.vue:228
+#: frontend/src2/workbook/WorkbookTemplates.vue:234
 msgid "This dashboard has been edited on your site. Updating replaces its contents with the latest version — your changes will be lost."
 msgstr "Ce tableau de bord a été modifié sur votre site. La mise à jour remplace son contenu par la dernière version — vos modifications seront perdues."
 
@@ -4344,7 +4361,7 @@ msgstr "Temps écoulé (secondes)"
 #: insights/insights/doctype/insights_query_v3/insights_query_v3.json:27
 #: insights/insights/doctype/insights_table_import_job/insights_table_import_job.json:37
 #: insights/insights/doctype/insights_workbook/insights_workbook.json:18
-#: insights/public/frontend/assets/WorkbookQuery-1591f8a4.js:16
+#: insights/public/frontend/assets/WorkbookQuery-13bfdae1.js:16
 msgid "Title"
 msgstr "Titre"
 
@@ -4352,7 +4369,7 @@ msgstr "Titre"
 msgid "Today"
 msgstr "Aujourd'hui"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:465
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:474
 msgid "Too many duplicate columns"
 msgstr "Trop de colonnes en double"
 
@@ -4436,16 +4453,18 @@ msgstr "Nombre distinct de..."
 msgid "Unpivot"
 msgstr "Dé-pivoter"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:1084
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:1114
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:1125
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:1155
 msgid "Unsupported Granularity"
 msgstr "Granularité non supportée"
 
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:856
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:864
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:879
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:886
-#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:900
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:867
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:875
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:890
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:897
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:916
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:925
+#: insights/insights/query_utils.py:100 insights/insights/query_utils.py:187
 msgid "Unsupported SQL Query"
 msgstr "Requête SQL non supportée"
 
@@ -4455,9 +4474,9 @@ msgstr "Graphique sans titre"
 
 #: frontend/src2/settings/DataStoreSettings.vue:42
 #: frontend/src2/settings/GeneralSettings.vue:103
-#: frontend/src2/workbook/WorkbookTemplates.vue:199
-#: frontend/src2/workbook/WorkbookTemplates.vue:233
-#: insights/public/frontend/assets/DataStoreSettings-76a3a47a.js:1
+#: frontend/src2/workbook/WorkbookTemplates.vue:205
+#: frontend/src2/workbook/WorkbookTemplates.vue:239
+#: insights/public/frontend/assets/DataStoreSettings-b0524302.js:1
 msgid "Update"
 msgstr "Mettre à jour"
 
@@ -4472,6 +4491,10 @@ msgstr "Mettre à jour les liens de table"
 #: frontend/src2/data_source/DataSourceTableList.vue:82
 msgid "Update Tables"
 msgstr "Mettre à jour les tables"
+
+#: frontend/src2/workbook/WorkbookTemplates.vue:188
+msgid "Update available"
+msgstr "Mise à jour disponible"
 
 #: frontend/src2/components/SecurityUpdateCard.vue:50
 msgid "Update from Frappe Cloud"
@@ -4668,7 +4691,7 @@ msgstr "Ce que contient ce tableau de bord"
 msgid "Workbook"
 msgstr "Classeur"
 
-#: frontend/src2/workbook/WorkbookTemplates.vue:113
+#: frontend/src2/workbook/WorkbookTemplates.vue:117
 msgid "Workbook Library"
 msgstr "Bibliothèque de classeurs"
 
@@ -4680,12 +4703,12 @@ msgstr "Classeur dupliqué avec succès"
 msgid "Workbook imported successfully"
 msgstr "Classeur importé avec succès"
 
-#: insights/api/templates.py:111
+#: insights/api/templates.py:118
 #, python-brace-format
 msgid "Workbook template {0} does not exist"
 msgstr "Le modèle de classeur {0} n'existe pas"
 
-#: insights/api/templates.py:290 insights/api/templates.py:397
+#: insights/api/templates.py:299 insights/api/templates.py:406
 #, python-brace-format
 msgid "Workbook template {0} requires apps that are not installed: {1}"
 msgstr "Le modèle de classeur {0} nécessite des applications qui ne sont pas installées : {1}"
@@ -4693,8 +4716,8 @@ msgstr "Le modèle de classeur {0} nécessite des applications qui ne sont pas i
 #: frontend/src2/components/AppSidebar.vue:104
 #: frontend/src2/components/NeoCockpitInsightsSidebar.vue:52
 #: frontend/src2/home/HomeWorkbookList.vue:36
-#: frontend/src2/workbook/WorkbookList.vue:146
-#: insights/public/frontend/assets/main-a8e3b5a3.js:9781
+#: frontend/src2/workbook/WorkbookList.vue:148
+#: insights/public/frontend/assets/main-b1587ea7.js:9782
 msgid "Workbooks"
 msgstr "Classeurs"
 
@@ -4739,6 +4762,11 @@ msgstr "Vous n'avez pas accès à une requête que celle-ci référence"
 #: insights/permissions.py:521
 msgid "You do not have access to one of the charts on this dashboard"
 msgstr "Vous n'avez pas accès à l'un des graphiques de ce tableau de bord"
+
+#: frontend/src2/auth/NoPermission.vue:10
+#: insights/public/frontend/assets/NoPermission-e978ee1a.js:1
+msgid "You do not have access to the dashboards."
+msgstr "Vous n'avez pas accès aux tableaux de bord."
 
 #: insights/permissions.py:506
 msgid "You do not have access to the query this chart is built on"
@@ -5063,6 +5091,11 @@ msgstr "{0} graphiques affichent des nombres différents de ceux de v2. Ouvrez-l
 msgid "{0} columns selected"
 msgstr "{0} colonnes sélectionnées"
 
+#: insights/insights/query_utils.py:185
+#, python-brace-format
+msgid "{0} could name more than one table"
+msgstr "{0} peut désigner plusieurs tables"
+
 #: frontend/src2/migration/v2_migration.ts:363
 #, python-brace-format
 msgid "{0} could not be started."
@@ -5083,7 +5116,7 @@ msgstr "{0} tableaux de bord sont encore dans Insights v2"
 msgid "{0} dashboards selected"
 msgstr "{0} tableaux de bord sélectionnés"
 
-#: frontend/src2/workbook/WorkbookTemplates.vue:55
+#: frontend/src2/workbook/WorkbookTemplates.vue:59
 #, python-brace-format
 msgid "{0} imported"
 msgstr "{0} importé"
@@ -5108,6 +5141,11 @@ msgstr "{0} n'est pas une adresse e-mail valide"
 msgid "{0} is not a workbook item type"
 msgstr "{0} n'est pas un type d'élément de classeur"
 
+#: insights/insights/doctype/insights_data_source_v3/ibis_utils.py:923
+#, python-brace-format
+msgid "{0} is not in a schema this data source reads"
+msgstr "{0} ne figure pas dans un schéma lu par cette source de données"
+
 #: insights/api/workbooks.py:339
 #, python-brace-format
 msgid "{0} is not the name of a {1}"
@@ -5128,7 +5166,7 @@ msgstr "{0} des {1} graphiques seront repris. {2} ne le seront pas."
 msgid "{0} of {1} queries return the same numbers as v2."
 msgstr "{0} des {1} requêtes renvoient les mêmes nombres que v2."
 
-#: frontend/src2/workbook/WorkbookTemplates.vue:99
+#: frontend/src2/workbook/WorkbookTemplates.vue:103
 #, python-brace-format
 msgid "{0} updated"
 msgstr "{0} mis à jour"
