@@ -161,6 +161,14 @@ class TestWorkbookTemplates(InsightsIntegrationTestCase):
     def test_the_library_speaks_the_persons_language_and_names_the_product(self):
         """The titles and descriptions were sent as their manifests write them (English on a French site), and
         the ERP's group was headed « ERPNext », a brand a Neoffice client is never shown."""
+        # //// Neoffice — the CI's bench compiles frappe's catalogues only: insights' French one is compiled
+        # //// here when the site has none, as `bench compile-po-to-mo --app insights` does on an instance
+        # //// (neoffice-maintenance#1195).
+        from frappe.gettext.translate import _compile_translation, get_mo_path
+
+        if not get_mo_path("insights", "fr").exists():
+            _compile_translation("insights", "fr")
+            frappe.translate.clear_cache()
         lang = frappe.local.lang
         frappe.local.lang = "fr"
         self.addCleanup(setattr, frappe.local, "lang", lang)
