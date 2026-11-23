@@ -5,6 +5,18 @@
 		<link rel="icon" href="/favicon.png" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>Frappe Insights</title>
+		<!-- //// Neoffice — the accent of frappe-ui (its blue scale) is repainted with the Neoffice signal by one sheet
+		     //// that neoffice_theme serves to every Vue app. It replaces the block each app copied into src/index.css,
+		     //// which set RGB triplets where frappe-ui reads colours and so never applied (measured 23.11.2026).
+		     //// A script and not a <link>: the build would try to resolve a sheet another app serves. -->
+		<script>
+			(function () {
+				var l = document.createElement("link");
+				l.rel = "stylesheet";
+				l.href = "/assets/neoffice_theme/css/spa_accent_v0.css";
+				document.head.appendChild(l);
+			})();
+		</script>
 	</head>
 	<body class="h-full">
 		<div id="app" class="h-full"></div>
