@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  frappe\n"
 "Report-Msgid-Bugs-To: hello@frappe.io\n"
-"POT-Creation-Date: 2026-11-18 02:48+0000\n"
+"POT-Creation-Date: 2026-11-25 02:48+0000\n"
 "PO-Revision-Date: 2026-04-27 11:03+0000\n"
 "Last-Translator: hello@frappe.io\n"
 "Language: fr_FR\n"
@@ -472,7 +472,7 @@ msgid "Array"
 msgstr "Tableau"
 
 #: frontend/src2/auth/NoPermission.vue:13
-#: insights/public/frontend/assets/NoPermission-e978ee1a.js:1
+#: insights/public/frontend/assets/NoPermission-9e425e6b.js:1
 msgid "Ask your administrator if your work needs them."
 msgstr "Demandez à votre administrateur si votre travail le nécessite."
 
@@ -501,7 +501,7 @@ msgid "Average of..."
 msgstr "Moyenne de..."
 
 #: frontend/src2/auth/NoPermission.vue:28
-#: insights/public/frontend/assets/NoPermission-e978ee1a.js:1
+#: insights/public/frontend/assets/NoPermission-9e425e6b.js:1
 msgid "Back to the desk"
 msgstr "Retour au bureau"
 
@@ -846,7 +846,7 @@ msgstr "Configuration"
 #: frontend/src2/query/components/JoinSelectorDialog.vue:387
 #: frontend/src2/query/components/UnionSelectorDialog.vue:155
 #: frontend/src2/query/components/source_selector/SourceSelectorDialog.vue:132
-#: insights/public/frontend/assets/main-b1587ea7.js:9780
+#: insights/public/frontend/assets/main-4cd36e81.js:9780
 msgid "Confirm"
 msgstr "Confirmer"
 
@@ -1083,7 +1083,7 @@ msgstr "Tableau de bord {0} introuvable"
 #: frontend/src2/dashboard/DashboardList.vue:134
 #: frontend/src2/dashboard/DashboardList.vue:140
 #: frontend/src2/workbook/WorkbookSidebar.vue:75
-#: insights/public/frontend/assets/main-b1587ea7.js:9782
+#: insights/public/frontend/assets/main-4cd36e81.js:9782
 msgid "Dashboards"
 msgstr "Tableaux de bord"
 
@@ -1133,7 +1133,7 @@ msgstr "Source de données"
 #: frontend/src2/data_source/DataSourceList.vue:146
 #: frontend/src2/data_source/DataSourceTable.vue:25
 #: frontend/src2/data_source/DataSourceTableList.vue:65
-#: insights/public/frontend/assets/main-b1587ea7.js:9782
+#: insights/public/frontend/assets/main-4cd36e81.js:9782
 msgid "Data Sources"
 msgstr "Sources de données"
 
@@ -1148,8 +1148,8 @@ msgstr "Sources de données | Insights"
 #: frontend/src2/settings/DataStoreSettings.vue:13
 #: frontend/src2/settings/Settings.vue:58
 #: insights/insights/doctype/insights_query_execution_log/insights_query_execution_log.json:56
-#: insights/public/frontend/assets/DataStoreSettings-b0524302.js:1
-#: insights/public/frontend/assets/main-b1587ea7.js:9782
+#: insights/public/frontend/assets/DataStoreSettings-bc079c0b.js:1
+#: insights/public/frontend/assets/main-4cd36e81.js:9782
 msgid "Data Store"
 msgstr "Entrepôt de données"
 
@@ -1249,7 +1249,7 @@ msgid "Demo Data Ready"
 msgstr "Données de démonstration prêtes"
 
 #: frontend/src2/query/components/QueryInfo.vue:32
-#: insights/public/frontend/assets/WorkbookQuery-13bfdae1.js:16
+#: insights/public/frontend/assets/WorkbookQuery-04bf90b6.js:16
 msgid "Details"
 msgstr ""
 
@@ -1384,7 +1384,7 @@ msgid "Email Sent At"
 msgstr "Email envoyé le"
 
 #: frontend/src2/workbook/WorkbookSidebarFolders.vue:280
-#: insights/public/frontend/assets/Workbook-9adc8b4e.js:26
+#: insights/public/frontend/assets/Workbook-59ffd340.js:26
 msgid "Empty"
 msgstr "Vide"
 
@@ -1394,7 +1394,7 @@ msgstr "Vide - Cliquez sur « Ajouter un filtre » pour ajouter un filtre"
 
 #: frontend/src2/settings/DataStoreSettings.vue:17
 #: frontend/src2/settings/PermissionsSettings.vue:88
-#: insights/public/frontend/assets/DataStoreSettings-b0524302.js:1
+#: insights/public/frontend/assets/DataStoreSettings-bc079c0b.js:1
 msgid "Enable"
 msgstr "Activer"
 
@@ -1405,7 +1405,7 @@ msgstr "Activer l'alerte"
 #. Label of a Check field in DocType 'Insights Settings'
 #: frontend/src2/query/components/QueryInfo.vue:44
 #: insights/insights/doctype/insights_settings/insights_settings.json:139
-#: insights/public/frontend/assets/WorkbookQuery-13bfdae1.js:16
+#: insights/public/frontend/assets/WorkbookQuery-04bf90b6.js:16
 msgid "Enable Data Store"
 msgstr "Activer l'entrepôt de données"
 
@@ -1424,7 +1424,7 @@ msgid "Enable permissions to restrict access to data sources & tables based on t
 msgstr "Activer les permissions pour restreindre l'accès aux sources de données et tables en fonction des équipes et utilisateurs."
 
 #: frontend/src2/settings/DataStoreSettings.vue:18
-#: insights/public/frontend/assets/DataStoreSettings-b0524302.js:1
+#: insights/public/frontend/assets/DataStoreSettings-bc079c0b.js:1
 msgid "Enable the data store to store database tables into a duckdb database for faster & cross-database queries."
 msgstr "Activer l'entrepôt de données pour stocker les tables dans une base DuckDB pour des requêtes plus rapides et inter-bases."
 
@@ -1792,7 +1792,7 @@ msgid "Generated SQL"
 msgstr "SQL généré"
 
 #: frontend/src2/auth/NoPermission.vue:29
-#: insights/public/frontend/assets/NoPermission-e978ee1a.js:1
+#: insights/public/frontend/assets/NoPermission-9e425e6b.js:1
 msgid "Go to my account"
 msgstr "Aller à mon compte"
 
@@ -2554,7 +2554,7 @@ msgid "Links"
 msgstr "Liens"
 
 #: frontend/src2/dashboard/DashboardCard.vue:46
-#: insights/public/frontend/assets/DashboardList-c55c2d06.js:11
+#: insights/public/frontend/assets/DashboardList-2603c7b7.js:11
 msgid "Load Preview"
 msgstr "Charger l'aperçu"
 
@@ -2661,7 +2661,7 @@ msgid "Measure Name"
 msgstr "Nom de la mesure"
 
 #: frontend/src2/settings/DataStoreSettings.vue:33
-#: insights/public/frontend/assets/DataStoreSettings-b0524302.js:1
+#: insights/public/frontend/assets/DataStoreSettings-bc079c0b.js:1
 msgid "Memory Limit"
 msgstr "Limite mémoire"
 
@@ -3242,7 +3242,7 @@ msgid "Query Result Limit"
 msgstr "Limite de résultats de la requête"
 
 #: frontend/src2/query/components/QueryInfo.vue:38
-#: insights/public/frontend/assets/WorkbookQuery-13bfdae1.js:16
+#: insights/public/frontend/assets/WorkbookQuery-04bf90b6.js:16
 msgid "Query Title"
 msgstr "Titre de la requête"
 
@@ -3438,7 +3438,7 @@ msgstr "Table de droite"
 #: frontend/src2/settings/DataStoreSettings.vue:25
 #: insights/insights/doctype/insights_table_import_log/insights_table_import_log.json:101
 #: insights/insights/doctype/insights_table_v3/insights_table_v3.json:86
-#: insights/public/frontend/assets/DataStoreSettings-b0524302.js:1
+#: insights/public/frontend/assets/DataStoreSettings-bc079c0b.js:1
 msgid "Row Limit"
 msgstr "Limite de lignes"
 
@@ -3595,7 +3595,7 @@ msgid "Search nodes\\u2026"
 msgstr "Rechercher des nœuds…"
 
 #: frontend/src2/query/components/SchemaExplorer.vue:108
-#: insights/public/frontend/assets/WorkbookQuery-13bfdae1.js:16
+#: insights/public/frontend/assets/WorkbookQuery-04bf90b6.js:16
 msgid "Search tables and columns..."
 msgstr "Rechercher des tables et des colonnes..."
 
@@ -3698,12 +3698,12 @@ msgid "Set Insights v2 as default"
 msgstr "Définir Insights v2 par défaut"
 
 #: frontend/src2/settings/DataStoreSettings.vue:34
-#: insights/public/frontend/assets/DataStoreSettings-b0524302.js:1
+#: insights/public/frontend/assets/DataStoreSettings-bc079c0b.js:1
 msgid "Set the maximum memory usage while importing tables into the data store. Default is 512MB"
 msgstr "Définir l'utilisation mémoire maximale lors de l'import des tables. Par défaut : 512 Mo"
 
 #: frontend/src2/settings/DataStoreSettings.vue:26
-#: insights/public/frontend/assets/DataStoreSettings-b0524302.js:1
+#: insights/public/frontend/assets/DataStoreSettings-bc079c0b.js:1
 msgid "Set the maximum number of rows per table that will be imported into the data store. Default is 10,00,000"
 msgstr "Définir le nombre maximum de lignes par table importées dans l'entrepôt. Par défaut : 1 000 000"
 
@@ -4064,7 +4064,7 @@ msgstr "La table {0} n'est pas {1}.{2}"
 #. Label of a Table field in DocType 'Insights Query'
 #: frontend/src2/query/components/SchemaExplorer.vue:103
 #: insights/insights/doctype/insights_query/insights_query.json:103
-#: insights/public/frontend/assets/WorkbookQuery-13bfdae1.js:16
+#: insights/public/frontend/assets/WorkbookQuery-04bf90b6.js:16
 msgid "Tables"
 msgstr "Tables"
 
@@ -4361,7 +4361,7 @@ msgstr "Temps écoulé (secondes)"
 #: insights/insights/doctype/insights_query_v3/insights_query_v3.json:27
 #: insights/insights/doctype/insights_table_import_job/insights_table_import_job.json:37
 #: insights/insights/doctype/insights_workbook/insights_workbook.json:18
-#: insights/public/frontend/assets/WorkbookQuery-13bfdae1.js:16
+#: insights/public/frontend/assets/WorkbookQuery-04bf90b6.js:16
 msgid "Title"
 msgstr "Titre"
 
@@ -4476,7 +4476,7 @@ msgstr "Graphique sans titre"
 #: frontend/src2/settings/GeneralSettings.vue:103
 #: frontend/src2/workbook/WorkbookTemplates.vue:205
 #: frontend/src2/workbook/WorkbookTemplates.vue:239
-#: insights/public/frontend/assets/DataStoreSettings-b0524302.js:1
+#: insights/public/frontend/assets/DataStoreSettings-bc079c0b.js:1
 msgid "Update"
 msgstr "Mettre à jour"
 
@@ -4717,7 +4717,7 @@ msgstr "Le modèle de classeur {0} nécessite des applications qui ne sont pas i
 #: frontend/src2/components/NeoCockpitInsightsSidebar.vue:52
 #: frontend/src2/home/HomeWorkbookList.vue:36
 #: frontend/src2/workbook/WorkbookList.vue:148
-#: insights/public/frontend/assets/main-b1587ea7.js:9782
+#: insights/public/frontend/assets/main-4cd36e81.js:9782
 msgid "Workbooks"
 msgstr "Classeurs"
 
@@ -4764,7 +4764,7 @@ msgid "You do not have access to one of the charts on this dashboard"
 msgstr "Vous n'avez pas accès à l'un des graphiques de ce tableau de bord"
 
 #: frontend/src2/auth/NoPermission.vue:10
-#: insights/public/frontend/assets/NoPermission-e978ee1a.js:1
+#: insights/public/frontend/assets/NoPermission-9e425e6b.js:1
 msgid "You do not have access to the dashboards."
 msgstr "Vous n'avez pas accès aux tableaux de bord."
 
